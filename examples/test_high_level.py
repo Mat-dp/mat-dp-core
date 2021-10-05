@@ -6,8 +6,10 @@ resources = [
     Resource('pizza_box'),
     Resource('energy', unit = 'kWh')
 ]
-print(resources)
+
 process_maker = ProcessMaker(resources)
+# Recipe class?
+# List of emissions by country
 
 processes = [
     process_maker(
@@ -18,17 +20,23 @@ processes = [
     process_maker(
         'make_pizza_box_normal',
         cardboard = 2,
+        recycled_cardboard = 0.5,
         pizza_box = -1
     ),
     process_maker(
         'make_pizza_box_recycled',
         recycled_cardboard = 3,
+        cardboard = 1,
         pizza_box = -1
     ),
     process_maker(
         'burn_pizza_box',
         pizza_box = 1,
-        energy = 2
+        energy = -2, # produced and consumed
+    ),
+    process_maker(
+        'energy_sink',
+        energy = 1
     )
 ]
 
@@ -48,16 +56,32 @@ policy_elements = [
         generate_cardboard = 1
     ),
     policy_element_maker(
+        'make_pizza_box_recycled',
+        'recycled_cardboard',
+        generate_cardboard = 1
+    ),
+    policy_element_maker(
+        'make_pizza_box_normal',
+        'recycled_cardboard',
+        generate_cardboard =  1
+
+    ),
+    policy_element_maker(
         'burn_pizza_box',
         'pizza_box',
         make_pizza_box_normal =  0.4,
         make_pizza_box_recycled =  0.6
+    ),
+    policy_element_maker(
+        'energy_sink',
+        'energy',
+        burn_pizza_box = 1
     )
 ]
 policy = Policy(resources, processes, policy_elements)
 
 print(resources)
-print(process_maker)
+#print(process_maker)
 print(processes)
-print(policy_element_maker)
-print(policy_elements)
+#print(policy_element_maker)
+#print(policy_elements)

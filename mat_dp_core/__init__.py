@@ -1,5 +1,6 @@
 from typing import Dict, List
-
+from mat_dp_core.maths_core import calculate_run_matrix
+import numpy as np
 class Resource:
     def __init__(self, resource_name, unit = 'ea'):
         self.resource_name = resource_name
@@ -70,7 +71,7 @@ class PolicyElement:
         
 
 
-class PolicyElementMaker:
+class PolicyElementMaker: # process demands???
     def __init__(
         self,
         resources: List[Resource],
@@ -121,5 +122,56 @@ class Policy:
         resources: List[Resource],
         processes: List[Process],
         policy_elements: List[PolicyElement]
+    ):
+        def generate_process_demands(resources: List[Resource], processes: List[Process]):
+            process_demands = np.zeros((len(processes), len(resources)))
+            resource_index = {resource: i for i, resource in enumerate(resources)}
+            for i, process in enumerate(processes):
+                for resource, value in process.process_demands.items():
+                    j = resource_index[resource]
+                    process_demands[i][j] = value
+            return process_demands
+        
+        def generate_policy(
+            resources: List[Resource], 
+            processes: List[Process], 
+            policy_elements: List[PolicyElement]
+        ):
+            policy = np.zeros(
+                (len(processes), len(processes), len(resources))
+            )
+            resource_index = {resource: i for i, resource in enumerate(resources)}
+            process_index = {process: i for i, process in enumerate(processes)}
+
+            for policy_element in policy_elements:
+                rel_proc = policy_element.relevant_process
+                rel_res = policy_element.relevant_resource
+
+                k = resource_index[rel_res]
+                j = process_index[rel_proc]
+                for incident_process, value in policy_element.incident_processes.items():
+                    i = process_index[incident_process]
+                    policy[i][j][k] = value
+            return policy
+
+        process_demands = generate_process_demands(resources, processes)
+        #print(process_demands[0])
+        policy = generate_policy(resources, processes, policy_elements)
+        #print(policy)
+        run_matrix = calculate_run_matrix(process_demands, policy)
+        print(run_matrix)
+        pass
+
+class ScenarioElement:
+    def __init__(
+        self,
+
+    ):
+        pass
+
+class Scenario:
+    def __init__(
+        self,
+
     ):
         pass
