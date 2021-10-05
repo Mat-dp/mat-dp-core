@@ -1,4 +1,4 @@
-from mat_dp_core import Resource, ProcessMaker, PolicyElementMaker, Policy
+from mat_dp_core import Resource, ProcessMaker, PolicyElementMaker, Policy, Scenario, ScenarioElementMaker
 
 resources = [
     Resource('cardboard', unit = 'm2'),
@@ -32,12 +32,13 @@ processes = [
     process_maker(
         'burn_pizza_box',
         pizza_box = 1,
-        energy = -2, # produced and consumed
+        energy = -4, # produced and consumed
     ),
     process_maker(
         'energy_sink',
-        energy = 1
-    )
+        energy = 2
+    ),
+
 ]
 
 policy_element_maker = PolicyElementMaker(resources, processes)
@@ -80,8 +81,24 @@ policy_elements = [
 ]
 policy = Policy(resources, processes, policy_elements)
 
-print(resources)
+scenario_element_maker = ScenarioElementMaker(resources, processes)
+
+scenario_elements = [
+    scenario_element_maker(
+        'energy_sink',
+        energy = 10
+    ),
+    #scenario_element_maker(
+    #    'burn_pizza_box',
+    #    energy = -3
+    #),
+]
+
+scenario = Scenario(policy, scenario_elements)
+
+#print(policy)
+#print(resources)
 #print(process_maker)
-print(processes)
+#print(processes)
 #print(policy_element_maker)
 #print(policy_elements)

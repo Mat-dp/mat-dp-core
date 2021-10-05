@@ -1,8 +1,9 @@
-from typing import Dict, List
-from mat_dp_core.maths_core import calculate_run_matrix
+from typing import Dict, List, Generic, TypeVar
+from mat_dp_core.maths_core import calculate_run_matrix, calculate_run_scenario, calculate_run_vector
 import numpy as np
+
 class Resource:
-    def __init__(self, resource_name, unit = 'ea'):
+    def __init__(self, resource_name: str, unit: str = 'ea'):
         self.resource_name = resource_name
         self.unit = unit
     def __repr__(self):
@@ -48,7 +49,6 @@ class ProcessMaker:
         )
     def __repr__(self):
         return f'<ProcessMaker, contains resources: {self.resources}>'
-
 
 class PolicyElement:
     def __init__(
@@ -109,12 +109,9 @@ class PolicyElementMaker: # process demands???
             relevant_resource = new_relevant_resource, 
             incident_processes = incident_process_props_by_proc_obj
         )
-        pass
-
+    
     def __repr__(self):
         return f'<PolicyElementMaker, contains processes: {self.processes}>'
-
-
 
 class Policy:
     def __init__(
@@ -153,23 +150,96 @@ class Policy:
                     i = process_index[incident_process]
                     policy[i][j][k] = value
             return policy
+        self.resources = resources
+        self.processes = processes
+        self.process_demands = generate_process_demands(resources, processes)
+        self.policy = generate_policy(resources, processes, policy_elements)
+        self.run_matrix = calculate_run_matrix(self.process_demands, self.policy)
+        self.policy_elements = policy_elements
 
-        process_demands = generate_process_demands(resources, processes)
-        policy = generate_policy(resources, processes, policy_elements)
-        run_matrix = calculate_run_matrix(process_demands, policy)
-        print(run_matrix)
-        pass
+    def __repr__(self):
+        return f'<Policy formed of : {self.policy_elements}>'
 
 class ScenarioElement:
     def __init__(
         self,
-
+        relevant_process: Process,
+        resource_lower_bounds:  Dict[Resource, float],
     ):
-        pass
+        self.relevant_process = relevant_process
+        self.resource_lower_bounds = resource_lower_bounds
+    
+    def __repr__(self):
+        return f'<ScenarioElement for Process: {self.relevant_process}, Resource: {self.relevant_resource}>'
+
+class ScenarioElementMaker: # process demands???
+    def __init__(
+        self,
+        resources: List[Resource],
+        processes: List[Process]
+    ):
+        self.processes = processes
+        self.process_index =  {process.process_name: process for process in processes}
+        self.resources = resources
+        self.resource_index = {resource.resource_name: resource for resource in resources}
+    
+    def __call__(
+        self,
+        relevant_process: str,
+        **resource_lower_bounds: float
+    ):
+
+        if relevant_process in self.process_index:
+            new_relevant_process = self.process_index[relevant_process]
+        else:
+            raise ValueError(f'Process {relevant_process} not found')
+
+        resource_lower_bounds_by_proc_obj = {}
+        for resource_name, value in resource_lower_bounds.items():
+            if resource_name in self.resource_index:
+                resource = self.resource_index[resource_name]
+            else:
+                raise ValueError(f'Resource {resource_name} not found')
+            resource_lower_bounds_by_proc_obj[resource] = value
+        return ScenarioElement(
+            relevant_process = new_relevant_process, 
+            resource_lower_bounds = resource_lower_bounds_by_proc_obj
+        )
+
+    def __repr__(self):
+        return f'<ScenarioElementMaker, contains processes: {self.processes}>'
+
+
 
 class Scenario:
     def __init__(
         self,
-
+        policy,
+        scenerio_elements
     ):
-        pass
+        def generate_scenario(
+            resources:List[Resource],
+            processes: List[Process],
+            scenerio_elements: List[ScenarioElement]
+        ):
+            scenario = np.zeros(
+                (len(processes), len(resources))
+            )
+            resource_index = {resource: i for i, resource in enumerate(resources)}
+            process_index = {process: i for i, process in enumerate(processes)}
+            for scenario_element in scenerio_elements:
+                rel_proc = scenario_element.relevant_process
+                i = process_index[rel_proc]
+
+                for relevant_resource, value in scenario_element.resource_lower_bounds.items():
+                    j = resource_index[relevant_resource]
+                    scenario[i][j] = value
+            return scenario
+        
+        process_demands = policy.process_demands
+        scenario = generate_scenario(policy.resources, policy.processes, scenerio_elements)
+        #print(scenario)
+        run_scenario = calculate_run_scenario(process_demands, scenario)
+        #print(run_scenario)
+        run_vector = calculate_run_vector(policy.run_matrix, run_scenario)
+        
