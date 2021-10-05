@@ -155,9 +155,7 @@ class Policy:
             return policy
 
         process_demands = generate_process_demands(resources, processes)
-        #print(process_demands[0])
         policy = generate_policy(resources, processes, policy_elements)
-        #print(policy)
         run_matrix = calculate_run_matrix(process_demands, policy)
         print(run_matrix)
         pass

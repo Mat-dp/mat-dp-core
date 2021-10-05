@@ -11,35 +11,23 @@ def calculate_run_matrix(
     policy to specify how the processes interrelate, calculate for each
     pair of processes the number of runs that process requires
     """
-    run_cube_matrix = np.zeros_like(demand_policy)
-
-    for i, process_policy in enumerate(demand_policy):
-        resource_products = -process_demands[i]
-        new_pol = np.transpose(process_policy)
-        for j, resource_produced_one_run in enumerate(resource_products):
-            dest_procs = new_pol[j]
-            for k, value in enumerate(dest_procs):
-                amount_demanded_by_sub = process_demands[k][j]*value
+    run_matrix = np.zeros(demand_policy.shape[0:2])
+    for i, process_slice in enumerate(demand_policy):
+        for j, resource_links in enumerate(process_slice):
+            resource_runs = []
+            for k, value in enumerate(resource_links):
+                resource_produced_one_run = -process_demands[i][k]
+                amount_demanded_by_sub = process_demands[j][k]*value
                 if amount_demanded_by_sub==0 and resource_produced_one_run==0:
                     expected_runs = 0
                 elif resource_produced_one_run ==0:
                     raise ValueError('Material demanded when none is produced!')
                 else:
                     expected_runs = amount_demanded_by_sub/resource_produced_one_run
-                run_cube_matrix[i][k][j] = expected_runs
-    
-    run_matrix = np.zeros(run_cube_matrix.shape[0:2])
-    
-    for i, process_in_layer in enumerate(run_cube_matrix):
-        for j, process_out_layer in enumerate(process_in_layer):
-            run_matrix[i][j] = max(process_out_layer)
+                resource_runs.append(expected_runs)
+            run_matrix[i][j] = max(resource_runs)
     return run_matrix
 
-
-                
-
-
-    
 
 
 def calculate_run_scenario(
