@@ -13,7 +13,7 @@ def calculate_run_matrix(
     policy to specify how the processes interrelate, calculate for each
     pair of processes the number of runs that process requires
     """
-    # TODO Allow travel in both direction through run matrix - will simplify later code
+    
     run_matrix = np.zeros(demand_policy.shape[0:2])
     for i, process_slice in enumerate(demand_policy):
         for j, resource_links in enumerate(process_slice):
@@ -31,7 +31,13 @@ def calculate_run_matrix(
                     run_ratio = resource_produced_one_run/amount_demanded_by_sub
                 resource_runs.append(run_ratio)
             run_matrix[i][j] = max(resource_runs)
-    
+    # Reflect run matrix
+    for i, in_process in enumerate(run_matrix):
+        for j, ratio in enumerate(in_process):
+            if (ratio !=0 )and (i!=j):
+                run_matrix[j][i] = 1/ratio
+    print(run_matrix)
+
     #return run_matrix
     new_run_matrix = np.copy(run_matrix)
     def iterate_on_run_matrix(run_matrix):
@@ -45,16 +51,17 @@ def calculate_run_matrix(
                     new_slice = run_matrix[j]
                     for k, k_run_ratio in enumerate(new_slice):
                         if k_run_ratio!=0:
-                            if new_run_matrix[i][k] ==0:
+                            if new_run_matrix[i][k] ==0 and (k!=i):
                                 new_run_matrix[i][k] = run_ratio*k_run_ratio
-            
+            """
             for j, run_ratio in enumerate(upstream_slice):
                 if run_ratio !=0:
                     new_slice = t_run_matrix[j]
                     for k, k_run_ratio in enumerate(new_slice):
                         if k_run_ratio!=0:
-                            if new_run_matrix[k][i] ==0:
+                            if new_run_matrix[k][i] ==0 and (k!=i):
                                 new_run_matrix[k][i] = run_ratio*k_run_ratio
+            """
         return new_run_matrix
     while True:
         brand_new_run_matrix = iterate_on_run_matrix(new_run_matrix)
@@ -111,7 +118,7 @@ def calculate_run_vector(
             upstream_slice = np.transpose(run_matrix)[i]
             #current_lower_bound = old_lower_bounds[i]
             lower_bounds = [current_lower_bound]
-            
+            """
             for j, downstream_ratio in enumerate(downstream_slice):
                 lower_bound_at_dest = old_lower_bounds[j]
                 if downstream_ratio == 0:
@@ -119,7 +126,7 @@ def calculate_run_vector(
                 else:
                     prediction = lower_bound_at_dest/downstream_ratio
                 lower_bounds.append(prediction)
-            
+            """
             for j, upstream_ratio in enumerate(upstream_slice):
                 lower_bound_at_dest = old_lower_bounds[j]
                 prediction = lower_bound_at_dest*upstream_ratio

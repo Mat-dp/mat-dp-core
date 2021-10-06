@@ -84,8 +84,8 @@ scenario_element_maker = ScenarioElementMaker(resources, processes)
 
 scenario_elements = [
     scenario_element_maker(
-        'energy_sink',
-        energy = 10
+        'burn_pizza_box',
+        pizza_box = 10
     ),
     #scenario_element_maker(
     #    'burn_pizza_box',
