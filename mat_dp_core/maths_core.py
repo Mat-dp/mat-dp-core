@@ -87,10 +87,10 @@ def calculate_run_vector(
     """
     run_vectors = []
     for i, lower_bound in enumerate(run_scenario):
-        def get_submatrix_of_run_matrix(process_index, lower_bound, run_matrix):
+        def get_submatrix_of_run_matrix(process_index: int, run_matrix: ArrayLike):
             axis_labels = [None]*5
 
-            def get_current_line(axis_labels, process_index):
+            def get_current_line(axis_labels: ArrayLike, process_index: int):
                 proc_slice = np.transpose(run_matrix)[process_index]
                 current_line = [None]*5
                 connecting_processes = []
@@ -153,7 +153,7 @@ def calculate_run_vector(
 
         
         if lower_bound !=0:
-            submatrix, process_indices = get_submatrix_of_run_matrix(i, lower_bound, run_matrix)
+            submatrix, process_indices = get_submatrix_of_run_matrix(i, run_matrix)
             comparison = np.array([float(0)]*len(process_indices))
             comparison[0] = float(lower_bound)
             results = solve(submatrix, comparison)
@@ -173,31 +173,6 @@ def calculate_run_vector(
         raise ValueError('More than one run vector found')
     return run_vector
 
-    """
-    for i, lower_bound in enumerate(run_scenario):
-        def get_total_runs_for_process(process_index, lower_bound, run_matrix):
-            if lower_bound !=0:
-                if lower_bound >0:
-                    proc_slice = np.transpose(run_matrix)[process_index]
-                else:
-                    proc_slice = run_matrix[process_index]
-                
-                for j, runs_to_satisfy in enumerate(proc_slice):
-                    if runs_to_satisfy != 0:
-                        dest_lower_bound = lower_bound/runs_to_satisfy
-                        total_runs = get_total_runs_for_process(j, dest_lower_bound, run_matrix)
-                        print(total_runs)
-                
-            else:
-                #
-                #    #j_lower = run_scenario[j]
-            
-                print(lower_bound)
-                print(proc_slice)
-        total_runs = get_total_runs_for_process(i, lower_bound, run_matrix)
-    """
-
-
 
 
 def calculate_actual_resource(
@@ -209,7 +184,13 @@ def calculate_actual_resource(
     that each process runs, calculate the number of resources that
     are required by each process.
     """
-    pass
+    actual_resource = np.zeros_like(process_demands)
+    for i, runs in enumerate(run_vector):
+        resource_demands = process_demands[i]
+        actual_resource_element = resource_demands*runs
+        actual_resource[i] = actual_resource_element
+    return actual_resource
+
 
 def calculate_actual_resource_flow(
     actual_resource: ArrayLike,     # (process, resource) -> +ve float

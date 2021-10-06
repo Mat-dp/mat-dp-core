@@ -1,5 +1,5 @@
 from typing import Dict, List, Generic, TypeVar
-from mat_dp_core.maths_core import calculate_run_matrix, calculate_run_scenario, calculate_run_vector
+from mat_dp_core.maths_core import calculate_run_matrix, calculate_run_scenario, calculate_run_vector, calculate_actual_resource
 import numpy as np
 
 class Resource:
@@ -240,6 +240,9 @@ class Scenario:
         scenario = generate_scenario(policy.resources, policy.processes, scenerio_elements)
         #print(scenario)
         run_scenario = calculate_run_scenario(process_demands, scenario)
-        #print(run_scenario)
+        print(run_scenario)
         run_vector = calculate_run_vector(policy.run_matrix, run_scenario)
         print(run_vector)
+        actual_resource = calculate_actual_resource(process_demands, run_vector)
+        print(actual_resource)
+        
