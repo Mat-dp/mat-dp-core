@@ -21,12 +21,14 @@ def calculate_run_matrix(
                 resource_produced_one_run = -process_demands[i][k]
                 amount_demanded_by_sub = process_demands[j][k]*value
                 if amount_demanded_by_sub==0 and resource_produced_one_run==0:
-                    expected_runs = 0
+                    run_ratio = 0
                 elif resource_produced_one_run ==0:
                     raise ValueError('Material demanded when none is produced!')
+                elif amount_demanded_by_sub ==0:
+                    run_ratio = 0
                 else:
-                    expected_runs = amount_demanded_by_sub/resource_produced_one_run
-                resource_runs.append(expected_runs)
+                    run_ratio = resource_produced_one_run/amount_demanded_by_sub
+                resource_runs.append(run_ratio)
             run_matrix[i][j] = max(resource_runs)
     #print(run_matrix)
     return run_matrix
@@ -64,6 +66,7 @@ def calculate_run_vector(
     Given the run matrix and run scenario, calculate the number of times
     that each process runs in the scenario
     """
+
     """
     # TODO Figure out if this start and end method is generic - test by adding other constraints
     start=None
@@ -197,11 +200,20 @@ def calculate_actual_resource_flow(
     demand_policy: ArrayLike        # (process, process, resource) -> +ve float
     ) -> ArrayLike:  # actual_resource_flow: (process, process, resource) -> +ve float
     """
-    Given the resource demands of each process, and the number of times
-    that each process runs, calculate the number of resources that
-    are required by each process.
+    Given the number of resources that are required by each process, and the policy
+    that defines how processes connect, calculate the number of resources that
+    flow through each edge.
     """
-    pass
+    actual_resource_flow = np.zeros_like(demand_policy)
+    for i, in_process in enumerate(demand_policy):
+        for j, out_process in enumerate(in_process):
+            for k, proportion in enumerate(out_process):
+                if proportion!=0:
+                    resource_out = actual_resource[j][k]
+                    resource_flow = proportion*resource_out
+                    actual_resource_flow[i][j][k] = resource_flow
+
+    return actual_resource_flow
 
 
 def get_flow_slice(

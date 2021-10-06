@@ -1,5 +1,12 @@
-from typing import Dict, List, Generic, TypeVar
-from mat_dp_core.maths_core import calculate_run_matrix, calculate_run_scenario, calculate_run_vector, calculate_actual_resource
+from typing import Dict, Generic, List, TypeVar
+
+from mat_dp_core.maths_core import (
+    calculate_actual_resource,
+    calculate_run_matrix,
+    calculate_run_scenario,
+    calculate_run_vector,
+    calculate_actual_resource_flow
+)
 import numpy as np
 
 class Resource:
@@ -170,7 +177,7 @@ class ScenarioElement:
         self.resource_lower_bounds = resource_lower_bounds
     
     def __repr__(self):
-        return f'<ScenarioElement for Process: {self.relevant_process}, Resource: {self.relevant_resource}>'
+        return f'<ScenarioElement for Process: {self.relevant_process}, ResourceLowerBounds: {self.resource_lower_bounds}>'
 
 class ScenarioElementMaker: # process demands???
     def __init__(
@@ -240,9 +247,10 @@ class Scenario:
         scenario = generate_scenario(policy.resources, policy.processes, scenerio_elements)
         #print(scenario)
         run_scenario = calculate_run_scenario(process_demands, scenario)
-        print(run_scenario)
+        #print(run_scenario)
         run_vector = calculate_run_vector(policy.run_matrix, run_scenario)
-        print(run_vector)
+        #print(run_vector)
         actual_resource = calculate_actual_resource(process_demands, run_vector)
-        print(actual_resource)
+        #print(actual_resource)
+        actual_resource_flow = calculate_actual_resource_flow(actual_resource, demand_policy= policy.policy)
         
