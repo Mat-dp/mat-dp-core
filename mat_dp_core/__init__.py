@@ -7,7 +7,8 @@ from mat_dp_core.maths_core import (
     calculate_run_vector,
     calculate_actual_resource_flow,
     get_flow_slice,
-    measure_resource_usage
+    measure_resource_usage,
+    alt_measure_resource_usage
 )
 import numpy as np
 
@@ -181,7 +182,7 @@ class ScenarioElement:
     def __repr__(self):
         return f'<ScenarioElement for Process: {self.relevant_process}, ResourceLowerBounds: {self.resource_lower_bounds}>'
 
-class ScenarioElementMaker: # process demands???
+class ScenarioElementMaker:
     def __init__(
         self,
         resources: List[Resource],
@@ -244,25 +245,96 @@ class Scenario:
                     j = resource_index[relevant_resource]
                     scenario[i][j] = value
             return scenario
-        
-        process_demands = policy.process_demands
-        self.scenario = generate_scenario(policy.resources, policy.processes, scenerio_elements)
+        self.processes = policy.processes
+        self.resources = policy.resources
+        self.process_demands = policy.process_demands
+        self.run_matrix = policy.run_matrix
+        self.scenario = generate_scenario(self.resources, self.processes, scenerio_elements)
         #print(self.scenario)
-        self.run_scenario = calculate_run_scenario(process_demands, self.scenario)
+        self.run_scenario = calculate_run_scenario(self.process_demands, self.scenario)
         #print(self.run_scenario)
-        self.run_vector = calculate_run_vector(policy.run_matrix, self.run_scenario)
-        #print(self.run_vector)
-        self.actual_resource = calculate_actual_resource(process_demands, self.run_vector)
+        self.run_vector = calculate_run_vector(self.run_matrix, self.run_scenario)
+        print(self.run_vector)
+        self.actual_resource = calculate_actual_resource(self.process_demands, self.run_vector)
         #print(self.actual_resource)
         self.actual_resource_flow = calculate_actual_resource_flow(self.actual_resource, demand_policy= policy.policy)
         #print(self.actual_resource_flow)
-        # probably to move
 
-        def generate_measure(processes):
-            measure = np.zeros((len(processes), len(processes)),dtype=bool)
-            measure[3][4] = True
+class MeasureElement:
+    def __init__(
+        self,
+        resource: Resource,
+        in_process: Process,
+        out_process: Process
+    ):
+        self.resource = resource
+        self.in_process = in_process
+        self.out_process = out_process
+    
+    def __repr__(self):
+        return f'<MeasureElement for \n InProcess: {self.in_process}, \n OutProcess: {self.out_process}, \n Resource: {self.resource}>'
+
+class MeasureElementMaker:
+    def __init__(
+        self,
+        resources,
+        processes
+    ) -> None:
+        self.processes = processes
+        self.process_index =  {process.process_name: process for process in processes}
+        self.resources = resources
+        self.resource_index = {resource.resource_name: resource for resource in resources}
+    def __call__(
+        self, 
+        resource: str,
+        in_process: str,
+        out_process: str
+    ) -> MeasureElement:
+        if resource in self.resource_index:
+            new_resource = self.resource_index[resource]
+        else:
+            raise ValueError(f'Process {resource} not found')
+        if in_process in self.process_index:
+            new_in_process = self.process_index[in_process]
+        else:
+            raise ValueError(f'Process {in_process} not found')
+        if out_process in self.process_index:
+            new_out_process = self.process_index[out_process]
+        else:
+            raise ValueError(f'Process {out_process} not found')
+        
+        return MeasureElement(
+                new_resource,
+                new_in_process,
+                new_out_process
+            )
+        
+        
+class Measure:
+    def __init__(
+        self,
+        scenario: Scenario,
+    ):
+        self.scenario = scenario
+    def __call__(
+        self,
+        measure_elements: List[MeasureElement]
+    ):
+        def generate_measure(processes, resources, measure_elements):
+            measure = np.zeros((len(processes), len(processes), len(resources)),dtype=bool)
+            for measure_element in measure_elements:
+                in_process = processes.index(measure_element.in_process)
+                out_process = processes.index(measure_element.out_process)
+                resource = resources.index(measure_element.resource)
+                measure[in_process][out_process][resource] = True
             return measure
-        flow_slice = get_flow_slice(self.actual_resource_flow, 3)
-        measure = generate_measure(policy.processes)
-        resource_usage = measure_resource_usage(flow_slice, measure)
-        #print(resource_usage)
+        
+        #flow_slice = get_flow_slice(scenario.actual_resource_flow, 3)
+        measure = generate_measure(self.scenario.processes, self.scenario.resources, measure_elements)
+        resource_usage = alt_measure_resource_usage(self.scenario.actual_resource_flow, measure)
+        new_resource_usage = {}
+        for i, usage in enumerate(resource_usage):
+            resource = self.scenario.resources[i]
+            new_resource_usage[resource.resource_name] = usage
+        return new_resource_usage
+

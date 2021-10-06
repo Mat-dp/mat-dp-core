@@ -13,6 +13,7 @@ def calculate_run_matrix(
     policy to specify how the processes interrelate, calculate for each
     pair of processes the number of runs that process requires
     """
+    # TODO Allow travel in both direction through run matrix - will simplify later code
     run_matrix = np.zeros(demand_policy.shape[0:2])
     for i, process_slice in enumerate(demand_policy):
         for j, resource_links in enumerate(process_slice):
@@ -30,8 +31,38 @@ def calculate_run_matrix(
                     run_ratio = resource_produced_one_run/amount_demanded_by_sub
                 resource_runs.append(run_ratio)
             run_matrix[i][j] = max(resource_runs)
-    #print(run_matrix)
-    return run_matrix
+    
+    #return run_matrix
+    new_run_matrix = np.copy(run_matrix)
+    def iterate_on_run_matrix(run_matrix):
+        new_run_matrix = np.copy(run_matrix)
+        for i in range(run_matrix.shape[0]):
+            t_run_matrix = np.transpose(run_matrix)
+            downstream_slice = run_matrix[i]
+            upstream_slice = t_run_matrix[i]
+            for j, run_ratio in enumerate(downstream_slice):
+                if run_ratio !=0:
+                    new_slice = run_matrix[j]
+                    for k, k_run_ratio in enumerate(new_slice):
+                        if k_run_ratio!=0:
+                            if new_run_matrix[i][k] ==0:
+                                new_run_matrix[i][k] = run_ratio*k_run_ratio
+            
+            for j, run_ratio in enumerate(upstream_slice):
+                if run_ratio !=0:
+                    new_slice = t_run_matrix[j]
+                    for k, k_run_ratio in enumerate(new_slice):
+                        if k_run_ratio!=0:
+                            if new_run_matrix[k][i] ==0:
+                                new_run_matrix[k][i] = run_ratio*k_run_ratio
+        return new_run_matrix
+    while True:
+        brand_new_run_matrix = iterate_on_run_matrix(new_run_matrix)
+        if np.array_equal(brand_new_run_matrix, new_run_matrix):
+            break
+        new_run_matrix = brand_new_run_matrix
+
+    return new_run_matrix
 
 
 
@@ -66,7 +97,50 @@ def calculate_run_vector(
     Given the run matrix and run scenario, calculate the number of times
     that each process runs in the scenario
     """
+    print(run_matrix)
+    print(run_scenario)
 
+
+    #Ask all edges what they predict the value of a particular node to be
+    # Take the maximum
+    # Iterate until the lower bounds stop increasing
+    def evaluate_new_lower_bounds(old_lower_bounds):
+        new_lower_bounds = []
+        for i, current_lower_bound in enumerate(old_lower_bounds):
+            downstream_slice = run_matrix[i]
+            upstream_slice = np.transpose(run_matrix)[i]
+            #current_lower_bound = old_lower_bounds[i]
+            lower_bounds = [current_lower_bound]
+            
+            for j, downstream_ratio in enumerate(downstream_slice):
+                lower_bound_at_dest = old_lower_bounds[j]
+                if downstream_ratio == 0:
+                    prediction = 0
+                else:
+                    prediction = lower_bound_at_dest/downstream_ratio
+                lower_bounds.append(prediction)
+            
+            for j, upstream_ratio in enumerate(upstream_slice):
+                lower_bound_at_dest = old_lower_bounds[j]
+                prediction = lower_bound_at_dest*upstream_ratio
+                lower_bounds.append(prediction)
+            
+            agreed_lower_bound = max(lower_bounds)
+            new_lower_bounds.append(agreed_lower_bound)
+            
+        return new_lower_bounds
+    
+    return evaluate_new_lower_bounds(run_scenario)
+    """
+    lower_bounds = run_scenario
+    for i in range(1):
+        new_lower_bounds = evaluate_new_lower_bounds(lower_bounds)
+        if np.array_equal(new_lower_bounds, lower_bounds):
+            break
+        lower_bounds = new_lower_bounds
+    """
+
+    
     """
     # TODO Figure out if this start and end method is generic - test by adding other constraints
     start=None
@@ -87,6 +161,7 @@ def calculate_run_vector(
     print(new_scenario_2)
     print(out)
     print(run_matrix)
+    """
     """
     run_vectors = []
     for i, lower_bound in enumerate(run_scenario):
@@ -145,14 +220,14 @@ def calculate_run_vector(
 
             new_axis_labels = axis_labels[0:x]
             return clean_array, new_axis_labels
-            """
+            ""
             # TODO Line descending tree also
             for i, run_num in enumerate(alt_proc_slice):
                 if run_num !=0:
                     if i not in axis_labels:
                         axis_labels.append(i)
                     current_line.append(run_num)
-            """
+            ""
 
         
         if lower_bound !=0:
@@ -175,6 +250,7 @@ def calculate_run_vector(
     else:
         raise ValueError('More than one run vector found')
     return run_vector
+    """
 
 
 
@@ -250,4 +326,22 @@ def measure_resource_usage(
                 total_resource_usage += flow_slice[i][j]
 
     return total_resource_usage
+
+def alt_measure_resource_usage(
+    actual_resource_flow: ArrayLike,    # (process, process, resource) -> +ve float
+    measure: ArrayLike              # (process, process, resource) -> bool
+) -> ArrayLike: # resource_usage (resource) -> +ve float
+    """
+    Given the resource flow and which edges to measure, calculate the total resource
+    consumed for each edge.
+    """
+    resource_usage = np.zeros(measure.shape[2:3])
+    for i, in_process in enumerate(measure):
+        for j, out_process in enumerate(in_process):
+            for k, count_bool in enumerate(out_process):
+                if count_bool:
+                    resource_value = actual_resource_flow[i][j][k]
+                    resource_usage[k] +=  resource_value
+    return resource_usage
+
 

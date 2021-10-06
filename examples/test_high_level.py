@@ -1,4 +1,4 @@
-from mat_dp_core import Resource, ProcessMaker, PolicyElementMaker, Policy, Scenario, ScenarioElementMaker
+from mat_dp_core import Resource, ProcessMaker, PolicyElementMaker, Policy, Scenario, ScenarioElementMaker, Measure, MeasureElementMaker
 
 resources = [
     Resource('cardboard', unit = 'm2'),
@@ -23,7 +23,6 @@ processes = [
         recycled_cardboard = 0.5,
         pizza_box = -1
     ),
-
     process_maker(
         'make_pizza_box_recycled',
         recycled_cardboard = 3,
@@ -95,10 +94,17 @@ scenario_elements = [
 ]
 
 scenario = Scenario(policy, scenario_elements)
+measure_element_maker = MeasureElementMaker(resources, processes)
 
-#print(policy)
-#print(resources)
-#print(process_maker)
-#print(processes)
-#print(policy_element_maker)
-#print(policy_elements)
+measure_elements = [
+    measure_element_maker(
+        'energy',
+        'burn_pizza_box',
+        'energy_sink'
+    )
+]
+
+measure = Measure(scenario)
+resource_usage = measure(measure_elements)
+print(resource_usage)
+
