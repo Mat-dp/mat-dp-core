@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.typing import ArrayLike
-from numpy.linalg import solve, lstsq, qr
+from numpy.linalg import solve
 
 from numpy import identity
 
@@ -13,7 +13,6 @@ def calculate_run_matrix(
     policy to specify how the processes interrelate, calculate for each
     pair of processes the number of runs that process requires
     """
-    print(process_demands)
     run_matrix = np.zeros(demand_policy.shape[0:2])
     for i, process_slice in enumerate(demand_policy):
         for j, resource_links in enumerate(process_slice):
@@ -65,11 +64,7 @@ def calculate_run_vector(
     Given the run matrix and run scenario, calculate the number of times
     that each process runs in the scenario
     """
-    # Subtract identity matrix
-    # Make into reduced row echelon form
-    #Use solver
-
-
+    """
     # TODO Figure out if this start and end method is generic - test by adding other constraints
     start=None
     end = None
@@ -79,31 +74,105 @@ def calculate_run_vector(
     for i, line in enumerate(np.transpose(run_matrix)):
         if all([i==0 for i in line]):
             start = i
-    
     i = identity(5)
     new_run = np.transpose(run_matrix - i)
     test = np.delete(new_run,start, 0)
     new_test = np.delete(test,end,1)
     new_scenario_2 = np.delete(run_scenario,start,0)
     out = solve(new_test, new_scenario_2)
+    print(new_test)
+    print(new_scenario_2)
     print(out)
-    return out
+    print(run_matrix)
     """
-    #print(np.array(out[3]))
-    new_run_mat = np.array(
-        [
-            [2, -1, 0, 0],
-            [1.5, 0, -1, 0],
-            [0, 0.4,0.6,-1],
-            [0, 0, 0, 0.5]
-        ]
-    )
-    new_run_scenario = np.array([0,0,0,5])
-    print(new_run_mat)
-    print(new_run_scenario)
-    out = solve(new_run_mat, new_run_scenario)
-    print(out)
-    """
+    run_vectors = []
+    for i, lower_bound in enumerate(run_scenario):
+        def get_submatrix_of_run_matrix(process_index, lower_bound, run_matrix):
+            axis_labels = [None]*5
+
+            def get_current_line(axis_labels, process_index):
+                proc_slice = np.transpose(run_matrix)[process_index]
+                current_line = [None]*5
+                connecting_processes = []
+                has_none_zero = False
+                for i, run_num in enumerate(proc_slice):
+                    if run_num !=0:
+                        if i not in axis_labels:
+                            first_free_slot = axis_labels.index(None)
+                            axis_labels[first_free_slot] = i
+                        line_index = axis_labels.index(i)
+                        current_line[line_index] = run_num
+                        connecting_processes.append(i)
+                        has_none_zero = True
+                    elif i == process_index:
+                        if i in axis_labels:
+                            line_index = axis_labels.index(i)
+                            current_line[line_index] = -1
+                if not has_none_zero:
+                    current_line = [None]*5
+                return current_line, axis_labels, connecting_processes
+            def get_current_lines(axis_labels, process_index):
+                current_lines = []
+                current_line, axis_labels, connecting_processes = get_current_line(axis_labels, process_index)
+                current_lines += [current_line]
+                for connected_index in connecting_processes:
+                    current_lines_new, axis_labels = get_current_lines(axis_labels, connected_index)
+                    current_lines += current_lines_new
+                return current_lines, axis_labels
+
+            current_lines, axis_labels = get_current_lines(axis_labels, process_index)
+            current_array = np.array(current_lines)
+            new_array = []
+            for line in current_array:
+                if not all([i==None for i in line]):
+                    new_array.append(line)
+            flipped_array = np.transpose(np.array(new_array))
+            new_new_array = []
+            for line in flipped_array:
+                if not all([i==None for i in line]):
+                    new_new_array.append(line)
+            
+            clean_array = np.array(new_new_array)
+            for i, item in enumerate(clean_array):
+                for j, sub_item in enumerate(item):
+                    if sub_item == None:
+                        clean_array[i][j] = 0
+            clean_array = np.transpose(np.array(clean_array, dtype = np.dtype('float64')))
+            x,y = clean_array.shape
+
+            new_axis_labels = axis_labels[0:x]
+            return clean_array, new_axis_labels
+            """
+            # TODO Line descending tree also
+            for i, run_num in enumerate(alt_proc_slice):
+                if run_num !=0:
+                    if i not in axis_labels:
+                        axis_labels.append(i)
+                    current_line.append(run_num)
+            """
+
+        
+        if lower_bound !=0:
+            submatrix, process_indices = get_submatrix_of_run_matrix(i, lower_bound, run_matrix)
+            comparison = np.array([float(0)]*len(process_indices))
+            comparison[0] = float(lower_bound)
+            results = solve(submatrix, comparison)
+            if len(results) != len(process_indices):
+                'result process index mismatch'
+            run_vector = np.zeros((len(run_scenario)))
+            for j, p_index in enumerate(process_indices):
+                result = results[j]
+                run_vector[p_index] = result
+            run_vector[i] = lower_bound
+            run_vectors.append(run_vector)
+
+
+    if len(run_vectors) == 1:
+        run_vector = run_vectors[0]
+    else:
+        raise ValueError('More than one run vector found')
+    return run_vector
+
     """
     for i, lower_bound in enumerate(run_scenario):
         def get_total_runs_for_process(process_index, lower_bound, run_matrix):

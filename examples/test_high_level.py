@@ -23,6 +23,7 @@ processes = [
         recycled_cardboard = 0.5,
         pizza_box = -1
     ),
+
     process_maker(
         'make_pizza_box_recycled',
         recycled_cardboard = 3,
@@ -38,7 +39,6 @@ processes = [
         'energy_sink',
         energy = 2
     ),
-
 ]
 
 policy_element_maker = PolicyElementMaker(resources, processes)

@@ -242,4 +242,4 @@ class Scenario:
         run_scenario = calculate_run_scenario(process_demands, scenario)
         #print(run_scenario)
         run_vector = calculate_run_vector(policy.run_matrix, run_scenario)
-        
+        print(run_vector)
