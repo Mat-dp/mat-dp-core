@@ -5,7 +5,9 @@ from mat_dp_core.maths_core import (
     calculate_run_matrix,
     calculate_run_scenario,
     calculate_run_vector,
-    calculate_actual_resource_flow
+    calculate_actual_resource_flow,
+    get_flow_slice,
+    measure_resource_usage
 )
 import numpy as np
 
@@ -244,13 +246,23 @@ class Scenario:
             return scenario
         
         process_demands = policy.process_demands
-        scenario = generate_scenario(policy.resources, policy.processes, scenerio_elements)
-        #print(scenario)
-        run_scenario = calculate_run_scenario(process_demands, scenario)
-        #print(run_scenario)
-        run_vector = calculate_run_vector(policy.run_matrix, run_scenario)
-        #print(run_vector)
-        actual_resource = calculate_actual_resource(process_demands, run_vector)
-        #print(actual_resource)
-        actual_resource_flow = calculate_actual_resource_flow(actual_resource, demand_policy= policy.policy)
-        
+        self.scenario = generate_scenario(policy.resources, policy.processes, scenerio_elements)
+        #print(self.scenario)
+        self.run_scenario = calculate_run_scenario(process_demands, self.scenario)
+        #print(self.run_scenario)
+        self.run_vector = calculate_run_vector(policy.run_matrix, self.run_scenario)
+        #print(self.run_vector)
+        self.actual_resource = calculate_actual_resource(process_demands, self.run_vector)
+        #print(self.actual_resource)
+        self.actual_resource_flow = calculate_actual_resource_flow(self.actual_resource, demand_policy= policy.policy)
+        #print(self.actual_resource_flow)
+        # probably to move
+
+        def generate_measure(processes):
+            measure = np.zeros((len(processes), len(processes)),dtype=bool)
+            measure[3][4] = True
+            return measure
+        flow_slice = get_flow_slice(self.actual_resource_flow, 3)
+        measure = generate_measure(policy.processes)
+        resource_usage = measure_resource_usage(flow_slice, measure)
+        #print(resource_usage)

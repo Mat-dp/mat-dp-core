@@ -223,7 +223,17 @@ def get_flow_slice(
     """
     Get a slice of the actual resource flow given a resource index.
     """
-    pass
+    flow_slice = np.zeros(actual_resource_flow.shape[0:2])
+
+    for i, in_process in enumerate(actual_resource_flow):
+        for j, out_process in enumerate(in_process):
+            try:
+                resource_value = out_process[resource_index]
+            except IndexError:
+                raise ValueError('Resource index out of range')
+            flow_slice[i][j] = resource_value
+    return flow_slice
+
 
 def measure_resource_usage(
     flow_slice: ArrayLike,          # (process, process) -> +ve float
@@ -233,4 +243,11 @@ def measure_resource_usage(
     Given a flow slice, calculate the total
     number of resources that flow through measured edges.
     """
-    pass
+    total_resource_usage = 0
+    for i, in_process in enumerate(measure):
+        for j, count_bool in enumerate(in_process):
+            if count_bool:
+                total_resource_usage += flow_slice[i][j]
+
+    return total_resource_usage
+
