@@ -80,8 +80,8 @@ policy_elements = [
     policy_element_maker(
         'burn_pizza_box',
         'pizza_box',
-        make_pizza_box_normal =  0.4,
-        make_pizza_box_recycled =  0.6
+        make_pizza_box_normal =  0.5,
+        make_pizza_box_recycled =  0.5
     ),
     policy_element_maker(
         'energy_sink',
@@ -96,7 +96,7 @@ scenario_element_maker = ScenarioElementMaker(resources, processes)
 scenario_elements = [
     scenario_element_maker(
         'energy_sink',
-        energy = 10
+        energy = 8
     ),
     #scenario_element_maker(
     #    'burn_pizza_box',
@@ -105,7 +105,7 @@ scenario_elements = [
 ]
 
 scenario = Scenario(policy, scenario_elements)
-print(scenario.run_scenario)
+#print(scenario.run_scenario)
 measure_element_maker = MeasureElementMaker(resources, processes)
 
 measure_elements = [
@@ -118,14 +118,14 @@ measure_elements = [
 
 measure = Measure(scenario)
 resource_usage = measure(measure_elements)
-print(resource_usage)
+#print(resource_usage)
 
 
 
 # Alternative scenario constructing
 
-scenario_elements_alt = [ScenarioElementAlt(processes[3],processes[4], {resources[3]:10})]
-scenario_alt = ScenarioAlt(policy, scenario_elements_alt)
+#scenario_elements_alt = [ScenarioElementAlt(processes[3],processes[4], {resources[3]:10})]
+#scenario_alt = ScenarioAlt(policy, scenario_elements_alt)
 #measure = Measure(scenario_alt)
 #resource_usage = measure(measure_elements)
 #print(resource_usage)

@@ -250,15 +250,15 @@ class Scenario:
         self.resources = policy.resources
         self.process_demands = policy.process_demands
         self.run_matrix = policy.run_matrix
-        #print(self.run_matrix)
+        print(self.run_matrix)
         self.scenario = generate_scenario(self.resources, self.processes, scenario_elements)
         #print(self.scenario)
         self.run_scenario = calculate_run_scenario(self.process_demands, self.scenario)
-        #print(self.run_scenario)
+        print(self.run_scenario)
         self.run_vector = calculate_run_vector(self.run_matrix, self.run_scenario)
-        #print(self.run_vector)
+        print(self.run_vector)
         self.actual_resource = calculate_actual_resource(self.process_demands, self.run_vector)
-        #print(self.actual_resource)
+        print(self.actual_resource)
         self.actual_resource_flow = calculate_actual_resource_flow(self.actual_resource, demand_policy= policy.policy)
         #print(self.actual_resource_flow)
 

@@ -1,8 +1,5 @@
 import numpy as np
 from numpy.typing import ArrayLike
-from numpy.linalg import solve
-
-from numpy import identity
 
 def calculate_run_matrix(
     process_demands: ArrayLike,     # (process, resource) -> float
@@ -25,17 +22,19 @@ def calculate_run_matrix(
                     run_ratio = 0
                 elif resource_produced_one_run ==0:
                     raise ValueError('Material demanded when none is produced!')
-                elif amount_demanded_by_sub ==0:
-                    run_ratio = 0
                 else:
-                    run_ratio = resource_produced_one_run/amount_demanded_by_sub
+                    run_ratio = amount_demanded_by_sub/resource_produced_one_run
                 resource_runs.append(run_ratio)
-            run_matrix[i][j] = max(resource_runs)
+            #print(resource_runs)
+            run_matrix[j][i] = max(resource_runs)
+
+    #return run_matrix
     # Reflect run matrix
     for i, in_process in enumerate(run_matrix):
         for j, ratio in enumerate(in_process):
             if (ratio !=0 )and (i!=j):
                 run_matrix[j][i] = 1/ratio
+    
     # Iterate to fill distant values
     new_run_matrix = np.copy(run_matrix)
     def iterate_on_run_matrix(run_matrix):
@@ -51,12 +50,13 @@ def calculate_run_matrix(
                                 new_run_matrix[i][k] = run_ratio*k_run_ratio
 
         return new_run_matrix
+    
     while True:
         brand_new_run_matrix = iterate_on_run_matrix(new_run_matrix)
         if np.array_equal(brand_new_run_matrix, new_run_matrix):
             break
         new_run_matrix = brand_new_run_matrix
-
+    
     return new_run_matrix
 
 
@@ -126,23 +126,28 @@ def calculate_run_vector(
     that each process runs in the scenario
     """
 
-    def evaluate_new_lower_bounds(old_lower_bounds):
-        new_lower_bounds = []
-        for i, current_lower_bound in enumerate(old_lower_bounds):
+    def iterate_on_run_vector(run_vector):
+        new_run_vector = []
+        for i, current_lower_bound in enumerate(run_vector):
             upstream_slice = np.transpose(run_matrix)[i]
             lower_bounds = [current_lower_bound]
-
             for j, upstream_ratio in enumerate(upstream_slice):
-                lower_bound_at_dest = old_lower_bounds[j]
-                prediction = lower_bound_at_dest*upstream_ratio
-                lower_bounds.append(prediction)
-            
-            agreed_lower_bound = max(lower_bounds)
-            new_lower_bounds.append(agreed_lower_bound)
-            
-        return new_lower_bounds
-    
-    return evaluate_new_lower_bounds(run_scenario)
+                lower_bounds.append(run_vector[j]*upstream_ratio)
+
+            new_run_vector.append(max(lower_bounds))
+        
+        return new_run_vector
+    run_vector = iterate_on_run_vector(run_scenario)
+    #return np.array([3,1,1,2,4])
+    """
+    run_vector = run_scenario
+    for i in range(5):
+        new_run_vector = iterate_on_run_vector(run_vector)
+        if np.array_equal(new_run_vector, run_vector):
+            break
+        run_vector = new_run_vector
+    """
+    return run_vector
 
 
 
@@ -157,9 +162,7 @@ def calculate_actual_resource(
     """
     actual_resource = np.zeros_like(process_demands)
     for i, runs in enumerate(run_vector):
-        resource_demands = process_demands[i]
-        actual_resource_element = resource_demands*runs
-        actual_resource[i] = actual_resource_element
+        actual_resource[i] = process_demands[i]*runs
     return actual_resource
 
 
@@ -176,10 +179,7 @@ def calculate_actual_resource_flow(
     for i, in_process in enumerate(demand_policy):
         for j, out_process in enumerate(in_process):
             for k, proportion in enumerate(out_process):
-                if proportion!=0:
-                    resource_out = actual_resource[j][k]
-                    resource_flow = proportion*resource_out
-                    actual_resource_flow[i][j][k] = resource_flow
+                actual_resource_flow[i][j][k] = proportion*actual_resource[j][k]
 
     return actual_resource_flow
 
@@ -232,8 +232,7 @@ def alt_measure_resource_usage(
         for j, out_process in enumerate(in_process):
             for k, count_bool in enumerate(out_process):
                 if count_bool:
-                    resource_value = actual_resource_flow[i][j][k]
-                    resource_usage[k] +=  resource_value
+                    resource_usage[k] += actual_resource_flow[i][j][k]
     return resource_usage
 
 
