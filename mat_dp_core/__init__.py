@@ -8,7 +8,8 @@ from mat_dp_core.maths_core import (
     calculate_actual_resource_flow,
     get_flow_slice,
     measure_resource_usage,
-    alt_measure_resource_usage
+    alt_measure_resource_usage,
+    calculate_run_scenario_alt
 )
 import numpy as np
 
@@ -224,20 +225,20 @@ class ScenarioElementMaker:
 class Scenario:
     def __init__(
         self,
-        policy,
-        scenerio_elements
+        policy: Policy,
+        scenario_elements: List[ScenarioElement]
     ):
         def generate_scenario(
             resources:List[Resource],
             processes: List[Process],
-            scenerio_elements: List[ScenarioElement]
+            scenario_elements: List[ScenarioElement]
         ):
             scenario = np.zeros(
                 (len(processes), len(resources))
             )
             resource_index = {resource: i for i, resource in enumerate(resources)}
             process_index = {process: i for i, process in enumerate(processes)}
-            for scenario_element in scenerio_elements:
+            for scenario_element in scenario_elements:
                 rel_proc = scenario_element.relevant_process
                 i = process_index[rel_proc]
 
@@ -250,7 +251,7 @@ class Scenario:
         self.process_demands = policy.process_demands
         self.run_matrix = policy.run_matrix
         #print(self.run_matrix)
-        self.scenario = generate_scenario(self.resources, self.processes, scenerio_elements)
+        self.scenario = generate_scenario(self.resources, self.processes, scenario_elements)
         #print(self.scenario)
         self.run_scenario = calculate_run_scenario(self.process_demands, self.scenario)
         #print(self.run_scenario)
@@ -339,3 +340,62 @@ class Measure:
             new_resource_usage[resource.resource_name] = usage
         return new_resource_usage
 
+
+
+class ScenarioElementAlt:
+    def __init__(
+        self,
+        in_process: Process,
+        out_process: Process,
+        resource_lower_bounds: Dict[Resource, float],
+    ):
+        self.in_process = in_process
+        self.out_process = out_process
+        self.resource_lower_bounds = resource_lower_bounds
+    
+    def __repr__(self):
+        return f'<ScenarioElement for InProcess: {self.in_process}, OutProcess: {self.out_process}, ResourceLowerBounds: {self.resource_lower_bounds}>'
+
+
+class ScenarioAlt:
+    def __init__(
+        self,
+        policy: Policy,
+        scenario_elements: List[ScenarioElementAlt]
+    ):
+        def generate_scenario(
+            resources:List[Resource],
+            processes: List[Process],
+            scenario_elements: List[ScenarioElementAlt]
+        ):
+            scenario = np.zeros(
+                (len(processes), len(processes), len(resources))
+            )
+            resource_index = {resource: i for i, resource in enumerate(resources)}
+            process_index = {process: i for i, process in enumerate(processes)}
+            for scenario_element in scenario_elements:
+                in_proc = scenario_element.in_process
+                out_proc = scenario_element.out_process
+
+                i = process_index[in_proc]
+                j = process_index[out_proc]
+                for relevant_resource, value in scenario_element.resource_lower_bounds.items():
+                    k = resource_index[relevant_resource]
+                    scenario[i][j][k] = value
+            return scenario
+        self.processes = policy.processes
+        self.resources = policy.resources
+        self.process_demands = policy.process_demands
+        self.run_matrix = policy.run_matrix
+        #print(self.run_matrix)
+        self.scenario = generate_scenario(self.resources, self.processes, scenario_elements)
+        #print(self.scenario)
+        self.run_scenario = calculate_run_scenario_alt(self.process_demands, self.scenario)
+        #print(self.run_scenario)
+        self.run_vector = calculate_run_vector(self.run_matrix, self.run_scenario)
+        #print(self.run_vector)
+        self.actual_resource = calculate_actual_resource(self.process_demands, self.run_vector)
+        #print(self.actual_resource)
+        self.actual_resource_flow = calculate_actual_resource_flow(self.actual_resource, demand_policy= policy.policy)
+        #print(self.actual_resource_flow)
+        

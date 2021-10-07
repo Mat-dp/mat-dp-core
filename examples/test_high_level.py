@@ -1,4 +1,15 @@
-from mat_dp_core import Resource, ProcessMaker, PolicyElementMaker, Policy, Scenario, ScenarioElementMaker, Measure, MeasureElementMaker
+from mat_dp_core import (
+    Measure,
+    MeasureElementMaker,
+    Policy,
+    PolicyElementMaker,
+    ProcessMaker,
+    Resource,
+    Scenario,
+    ScenarioAlt,
+    ScenarioElementAlt,
+    ScenarioElementMaker,
+)
 
 resources = [
     Resource('cardboard', unit = 'm2'),
@@ -84,8 +95,8 @@ scenario_element_maker = ScenarioElementMaker(resources, processes)
 
 scenario_elements = [
     scenario_element_maker(
-        'burn_pizza_box',
-        pizza_box = 10
+        'energy_sink',
+        energy = 10
     ),
     #scenario_element_maker(
     #    'burn_pizza_box',
@@ -94,6 +105,7 @@ scenario_elements = [
 ]
 
 scenario = Scenario(policy, scenario_elements)
+print(scenario.run_scenario)
 measure_element_maker = MeasureElementMaker(resources, processes)
 
 measure_elements = [
@@ -108,3 +120,12 @@ measure = Measure(scenario)
 resource_usage = measure(measure_elements)
 print(resource_usage)
 
+
+
+# Alternative scenario constructing
+
+scenario_elements_alt = [ScenarioElementAlt(processes[3],processes[4], {resources[3]:10})]
+scenario_alt = ScenarioAlt(policy, scenario_elements_alt)
+#measure = Measure(scenario_alt)
+#resource_usage = measure(measure_elements)
+#print(resource_usage)

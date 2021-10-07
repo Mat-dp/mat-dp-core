@@ -41,9 +41,7 @@ def calculate_run_matrix(
     def iterate_on_run_matrix(run_matrix):
         new_run_matrix = np.copy(run_matrix)
         for i in range(run_matrix.shape[0]):
-            t_run_matrix = np.transpose(run_matrix)
             downstream_slice = run_matrix[i]
-            upstream_slice = t_run_matrix[i]
             for j, run_ratio in enumerate(downstream_slice):
                 if run_ratio !=0:
                     new_slice = run_matrix[j]
@@ -69,7 +67,7 @@ def calculate_run_scenario(
 ) -> ArrayLike:  # run_scenario: process -> +ve float
     """
     Given the resource demands of each process, and the scenario to specify
-    the lower bound of each resource edge, calculate the lower bound of
+    the lower bound of each resource on each process node, calculate the lower bound of
     the number of times that each process must run
     """
     run_scenario = np.zeros(scenario.shape[0:1])
@@ -77,12 +75,45 @@ def calculate_run_scenario(
         resource_runs = []
         for j, lower_bound in enumerate(resource_bounds):
             amount_demanded = process_demands[i][j]
-            if amount_demanded==0 or lower_bound==0:
+            if amount_demanded==0:
                 expected_runs = 0
             else:
                 expected_runs = lower_bound/amount_demanded
             resource_runs.append(expected_runs)
         run_scenario[i] = max(resource_runs)
+    return run_scenario
+
+def calculate_run_scenario_alt(
+    process_demands: ArrayLike,     # (process, resource) -> float
+    scenario: ArrayLike             # (process, process, resource) -> +ve float
+) -> ArrayLike:  # run_scenario: process -> +ve float
+    """
+    Given the resource demands of each process, and the scenario to specify
+    the lower bound of each resource edge, calculate the lower bound of
+    the number of times that each process must run
+    """
+    run_scenario = np.zeros(scenario.shape[0:1])
+    for i, in_process in enumerate(scenario):
+        for j, out_process in enumerate(in_process):
+            in_resource_runs = []
+            out_resource_runs = []
+            for k, resource_lower_bound in enumerate(out_process):
+                in_demand = process_demands[i][k]
+                out_demand = process_demands[j][k]
+                if in_demand ==0:
+                    in_expected_runs = 0
+                else:
+                    in_expected_runs = -resource_lower_bound/in_demand
+                if out_demand ==0:
+                    out_expected_runs = 0
+                else:
+                    out_expected_runs = resource_lower_bound/out_demand
+                in_resource_runs.append(in_expected_runs)
+                out_resource_runs.append(out_expected_runs)
+            in_max_runs = max(in_resource_runs)
+            out_max_runs = max(out_resource_runs)
+            run_scenario[i] = max(run_scenario[i], in_max_runs)
+            run_scenario[j] = max(run_scenario[j], out_max_runs)
     return run_scenario
 
 
