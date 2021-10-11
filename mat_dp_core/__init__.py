@@ -4,22 +4,21 @@ from typing import Dict, Generic, List, Optional, Tuple, TypeVar, Union
 from mat_dp_core.maths_core import (
     calculate_actual_resource,
     calculate_run_matrix,
-    calculate_run_scenario,
     calculate_run_vector,
     calculate_actual_resource_flow,
-    get_flow_slice,
-    measure_resource_usage,
-    alt_measure_resource_usage,
 )
+from numpy.typing import ArrayLike
 import numpy as np
 from dataclasses import dataclass
+
 ResourceName = str
 ProcessName = str
-
-# TODO: define __repr__ for each class
+Unit = str
 
 class Resource:
-    def __init__(self, name: ResourceName, unit: str = 'ea'):
+    name: ResourceName
+    unit: Unit
+    def __init__(self, name: ResourceName, unit: Unit = 'ea'):
         self.name = name
         self.unit = unit
 
@@ -28,6 +27,8 @@ class Resource:
 
 
 class Process:
+    name: ProcessName
+    demands: Dict[Resource, float]
     def __init__(
         self, 
         name: ProcessName, 
@@ -48,35 +49,43 @@ class PolicyElement:
         self, 
         resource: Resource, 
         process: Process, 
-        demands: Dict[Process, float]
+        incident_processes: Dict[Process, float]
     ):
-
-        if resource not in demands.keys():
-            raise ValueError(f'Resource {resource} not found in demands')
+        for incident_process in incident_processes.keys():
+            if resource not in incident_process.demands.keys():
+                raise ValueError(f'Resource {resource} not found in process demands for incident_process {incident_process} on process {process}')
         if resource not in process.demands.keys():
             raise ValueError(f'Resource {resource} not found in process demands for process {process}')
         if process in process.demands.keys():
             raise ValueError(f'Self demanding process {process}')
-        total_incidence = sum(demands.values())
+        total_incidence = sum(incident_processes.values())
         if total_incidence != 1:
             raise ValueError(f'Total incidence for process {process} not 1 but {total_incidence}')
         self.resource = resource
         self.process = process
-        self.demands = demands
+        self.incident_processes = incident_processes
     
     def __repr__(self):
         return f'<PolicyElement for Process: {self.process}, Resource: {self.resource}>'
 
 class Policy:
+    processes: List[Process]
+    resources: List[Resource]
+    process_demands: ArrayLike
+    policy: ArrayLike
+    run_matrix: ArrayLike
+    elements: List[PolicyElement]
     def __init__(self, elements: List[PolicyElement]):
         def get_processes_from_policy_elements(policy_elements: List[PolicyElement]) -> List[Process]:
             processes = []
             for policy_element in policy_elements:
+                #print(policy_element.incident_processes)
                 if policy_element.process not in processes:
                     processes.append(policy_element.process)
-                for process in policy_element.demands.keys():
+                for process in policy_element.incident_processes.keys():
                     if process not in processes:
-                        processes.append(policy_element.process)
+                        processes.append(process)
+
             return processes
         
         def get_resources_from_processes(processes: List[Process]) -> List[Resource]:
@@ -87,7 +96,7 @@ class Policy:
                         resources.append(resource)
             return resources
         
-        def generate_process_demands(resources: List[Resource], processes: List[Process]):
+        def generate_process_demands(resources: List[Resource], processes: List[Process]) -> ArrayLike:
             process_demands = np.zeros((len(processes), len(resources)))
             resource_index = {resource: i for i, resource in enumerate(resources)}
             for i, process in enumerate(processes):
@@ -100,7 +109,7 @@ class Policy:
             resources: List[Resource], 
             processes: List[Process], 
             policy_elements: List[PolicyElement]
-        ):
+        ) -> ArrayLike:
             policy = np.zeros(
                 (len(processes), len(processes), len(resources))
             )
@@ -110,7 +119,8 @@ class Policy:
             for policy_element in policy_elements:
                 k = resource_index[policy_element.resource]
                 j = process_index[policy_element.process]
-                for incident_process, value in policy_element.demands.items():
+                for incident_process, value in policy_element.incident_processes.items():
+                    print(process_index)
                     i = process_index[incident_process]
                     policy[i][j][k] = value
             return policy
@@ -172,8 +182,6 @@ class ScenarioFlow(BaseFlow):
     def __repr__(self):
         return f'<ScenarioFlow from process {self.in_process} to process {self.out_process}>'
 
-# Measure item by item
-
 
 @dataclass
 class RunMeasure:
@@ -190,7 +198,6 @@ class FlowMeasure(BaseFlow):
 class FlowMeasurement:
     resource: float
     units: str
-
 
 
 class Scenario:
@@ -218,7 +225,7 @@ class Scenario:
                     )
             return runs
         
-        def runs_to_run_scenario(runs: List[ScenarioRun], processes: List[Process]) -> np.ArrayLike:
+        def runs_to_run_scenario(runs: List[ScenarioRun], processes: List[Process]) -> ArrayLike:
             run_scenario = np.zeros((len(processes),))
             process_index = {process: i for i, process in enumerate(processes)}
             for run in runs:
@@ -230,102 +237,35 @@ class Scenario:
         for element in elements:
             runs += convert_element_to_runs(element)
 
-        self.processes = policy.processes
-        self.run_scenario = runs_to_run_scenario(runs, self.processes)
-        self.resources = policy.resources
-        self.process_demands = policy.process_demands
-        self.run_matrix = policy.run_matrix
-        self.run_vector = calculate_run_vector(self.run_matrix, self.run_scenario)
+        self.policy = policy
+        self.run_scenario = runs_to_run_scenario(runs, self.policy.processes)
+        self.run_vector = calculate_run_vector(self.policy.run_matrix, self.run_scenario)
         #print(self.run_vector)
-        self.actual_resource = calculate_actual_resource(self.process_demands, self.run_vector)
+        self.actual_resource = calculate_actual_resource(self.policy.process_demands, self.run_vector)
         #print(self.actual_resource)
         self.actual_resource_flow = calculate_actual_resource_flow(self.actual_resource, demand_policy= policy.policy)
         #print(self.actual_resource_flow)
 
+    def measure_runs(self, measurement: RunMeasure) -> RunMeasurement:
+        process_index = self.policy.processes.index(measurement.process)
+        runs = self.run_vector[process_index]
+        return RunMeasurement(n_runs=runs)
 
-    def measure(self, measurements: List[Union[RunMeasure, FlowMeasure]]):
-        for measurement in measurements:
-            pass
-        
-        raise NotImplementedError('Nope')
-
-
-
-# class MeasureElement:
-#     def __init__(
-#         self,
-#         resource: Resource,
-#         in_process: Process,
-#         out_process: Process
-#     ):
-#         self.resource = resource
-#         self.in_process = in_process
-#         self.out_process = out_process
-#     
-#     def __repr__(self):
-#         return f'<MeasureElement for \n InProcess: {self.in_process}, \n OutProcess: {self.out_process}, \n Resource: {self.resource}>'
-# 
-# class MeasureElementMaker:
-#     def __init__(
-#         self,
-#         resources,
-#         processes
-#     ) -> None:
-#         self.processes = processes
-#         self.process_index =  {process.process_name: process for process in processes}
-#         self.resources = resources
-#         self.resource_index = {resource.resource_name: resource for resource in resources}
-#     def __call__(
-#         self, 
-#         resource: str,
-#         in_process: str,
-#         out_process: str
-#     ) -> MeasureElement:
-#         if resource in self.resource_index:
-#             new_resource = self.resource_index[resource]
-#         else:
-#             raise ValueError(f'Process {resource} not found')
-#         if in_process in self.process_index:
-#             new_in_process = self.process_index[in_process]
-#         else:
-#             raise ValueError(f'Process {in_process} not found')
-#         if out_process in self.process_index:
-#             new_out_process = self.process_index[out_process]
-#         else:
-#             raise ValueError(f'Process {out_process} not found')
-#         
-#         return MeasureElement(
-#                 new_resource,
-#                 new_in_process,
-#                 new_out_process
-#             )
-#         
-#         
-# class Measure:
-#     def __init__(
-#         self,
-#         scenario: Scenario,
-#     ):
-#         self.scenario = scenario
-#     def __call__(
-#         self,
-#         measure_elements: List[MeasureElement]
-#     ):
-#         def generate_measure(processes, resources, measure_elements):
-#             measure = np.zeros((len(processes), len(processes), len(resources)),dtype=bool)
-#             for measure_element in measure_elements:
-#                 in_process = processes.index(measure_element.in_process)
-#                 out_process = processes.index(measure_element.out_process)
-#                 resource = resources.index(measure_element.resource)
-#                 measure[in_process][out_process][resource] = True
-#             return measure
-#         
-#         #flow_slice = get_flow_slice(scenario.actual_resource_flow, 3)
-#         measure = generate_measure(self.scenario.processes, self.scenario.resources, measure_elements)
-#         resource_usage = alt_measure_resource_usage(self.scenario.actual_resource_flow, measure)
-#         new_resource_usage = {}
-#         for i, usage in enumerate(resource_usage):
-#             resource = self.scenario.resources[i]
-#             new_resource_usage[resource.resource_name] = usage
-#         return new_resource_usage
-# 
+    def measure_flow(self, measurement: FlowMeasure) -> FlowMeasurement:
+        resource_index = self.policy.resources.index(measurement.resource)
+        if measurement.in_process is not None and measurement.out_process is not None:
+            in_process_index = self.policy.processes.index(measurement.in_process)
+            out_process_index = self.policy.processes.index(measurement.out_process)
+            value = self.actual_resource_flow[in_process_index][out_process_index][resource_index]
+        elif measurement.out_process is not None:
+            out_process_index = self.policy.processes.index(measurement.out_process)
+            value = sum(self.actual_resource_flow[:,out_process_index, resource_index])
+        elif measurement.in_process is not None:
+            in_process_index = self.policy.processes.index(measurement.in_process)
+            value = sum(self.actual_resource_flow[in_process_index,:, resource_index])
+        else:
+            raise TypeError('Measurement not of type FlowMeasure')
+        units = measurement.resource.unit
+        return FlowMeasurement(value, units)
+    def __repr__(self):
+        return f'<Scenario for policy: {self.policy}, run_scenario: {self.run_scenario}>'

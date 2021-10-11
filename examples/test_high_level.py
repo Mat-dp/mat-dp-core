@@ -1,15 +1,13 @@
 from mat_dp_core import (
-    Measure,
-    MeasureElementMaker,
-    Policy,
-    PolicyElementMaker,
-    ProcessMaker,
     Resource,
+    Process,
+    Policy,
+    PolicyElement,
     Scenario,
-    ScenarioAlt,
-    ScenarioElementAlt,
-    ScenarioElementMaker,
+    ScenarioFlow,
+    FlowMeasure
 )
+from mat_dp_core.utils import generate_index, generate_resource_index, generate_process_index
 
 resources = [
     Resource('cardboard', unit = 'm2'),
@@ -18,114 +16,115 @@ resources = [
     Resource('energy', unit = 'kWh')
 ]
 
-process_maker = ProcessMaker(resources)
-# Recipe class?
-# List of emissions by country
+resource_index = generate_resource_index(resources)
 
 processes = [
-    process_maker(
+    Process(
         'generate_cardboard',
-        cardboard = -1,
-        recycled_cardboard = -2
+        {
+            resource_index['cardboard']: -1.0,
+            resource_index['recycled_cardboard']: -2.0
+        }
     ),
-    process_maker(
+    Process(
         'make_pizza_box_normal',
-        cardboard = 2,
-        recycled_cardboard = 0.5,
-        pizza_box = -1
+        {
+            resource_index['cardboard']: 2.0,
+            resource_index['recycled_cardboard']: 0.5,
+            resource_index['pizza_box']: -1
+        }
     ),
-    process_maker(
+    Process(
         'make_pizza_box_recycled',
-        recycled_cardboard = 3,
-        cardboard = 1,
-        pizza_box = -1
+        {
+            resource_index['recycled_cardboard']: 3,
+            resource_index['cardboard']: 1,
+            resource_index['pizza_box']: -1
+        }
     ),
-    process_maker(
+    Process(
         'burn_pizza_box',
-        pizza_box = 1,
-        energy = -4, # produced and consumed
+        {
+            resource_index['pizza_box']: 1,
+            resource_index['energy']: -4
+        }
     ),
-    process_maker(
+    Process(
         'energy_sink',
-        energy = 2
-    ),
+        {
+            resource_index['energy']: 2
+        }
+    )
 ]
 
-policy_element_maker = PolicyElementMaker(resources, processes)
-
+processes_index = generate_process_index(processes)
 
 policy_elements = [
-    policy_element_maker(
-        'make_pizza_box_normal',
-        'cardboard',
-        generate_cardboard =  1
+    PolicyElement(
+        resource_index['cardboard'],
+        processes_index['make_pizza_box_normal'],
+        {
+            processes_index['generate_cardboard']: 1
+        }
+    ),
+    PolicyElement(
+        resource_index['cardboard'],
+        processes_index['make_pizza_box_recycled'],
+        {
+            processes_index['generate_cardboard']: 1
+        }
+    ),
+    PolicyElement(
+        resource_index['recycled_cardboard'],
+        processes_index['make_pizza_box_recycled'],
+        {
+            processes_index['generate_cardboard']: 1
+        }
+    ),
+    PolicyElement(
+        resource_index['recycled_cardboard'],
+        processes_index['make_pizza_box_normal'],
+        {
+            processes_index['generate_cardboard']: 1
+        }
+    ),
+    PolicyElement(
+        resource_index['pizza_box'],
+        processes_index['burn_pizza_box'],
+        {
+            processes_index['make_pizza_box_normal']: 0.5,
+            processes_index['make_pizza_box_recycled']: 0.5
+        }
+    ),
+    PolicyElement(
+        resource_index['energy'],
+        processes_index['energy_sink'],
+        {
+            processes_index['burn_pizza_box']: 1,
 
-    ),
-    policy_element_maker(
-        'make_pizza_box_recycled',
-        'cardboard',
-        generate_cardboard = 1
-    ),
-    policy_element_maker(
-        'make_pizza_box_recycled',
-        'recycled_cardboard',
-        generate_cardboard = 1
-    ),
-    policy_element_maker(
-        'make_pizza_box_normal',
-        'recycled_cardboard',
-        generate_cardboard =  1
-
-    ),
-    policy_element_maker(
-        'burn_pizza_box',
-        'pizza_box',
-        make_pizza_box_normal =  0.5,
-        make_pizza_box_recycled =  0.5
-    ),
-    policy_element_maker(
-        'energy_sink',
-        'energy',
-        burn_pizza_box = 1
+        }
     )
 ]
-policy = Policy(resources, processes, policy_elements)
 
-scenario_element_maker = ScenarioElementMaker(resources, processes)
+policy = Policy(policy_elements)
+
+
 
 scenario_elements = [
-    scenario_element_maker(
-        'energy_sink',
-        energy = 8
-    ),
-    #scenario_element_maker(
-    #    'burn_pizza_box',
-    #    energy = -3
-    #),
-]
-
-scenario = Scenario(policy, scenario_elements)
-#print(scenario.run_scenario)
-measure_element_maker = MeasureElementMaker(resources, processes)
-
-measure_elements = [
-    measure_element_maker(
-        'energy',
-        'burn_pizza_box',
-        'energy_sink'
+    ScenarioFlow(
+        resource_index['energy'],
+        value = 8,
+        out_process = processes_index['energy_sink']
     )
 ]
 
-measure = Measure(scenario)
-resource_usage = measure(measure_elements)
-#print(resource_usage)
+scenario = Scenario(policy, scenario_elements) # type: ignore
 
+resource_usage = scenario.measure_flow(
+    FlowMeasure(
+        resource_index['energy'],
+        in_process = processes_index['burn_pizza_box']
+    )
+)
 
-
-# Alternative scenario constructing
-
-#scenario_elements_alt = [ScenarioElementAlt(processes[3],processes[4], {resources[3]:10})]
-#scenario_alt = ScenarioAlt(policy, scenario_elements_alt)
-#measure = Measure(scenario_alt)
-#resource_usage = measure(measure_elements)
-#print(resource_usage)
+print(resource_usage)
