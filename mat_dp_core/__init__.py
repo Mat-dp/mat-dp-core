@@ -172,6 +172,9 @@ class ScenarioFlow(BaseFlow):
     def __repr__(self):
         return f'<ScenarioFlow from process {self.in_process} to process {self.out_process}>'
 
+# Measure item by item
+
+
 @dataclass
 class RunMeasure:
     process: Process
@@ -243,6 +246,7 @@ class Scenario:
     def measure(self, measurements: List[Union[RunMeasure, FlowMeasure]]):
         for measurement in measurements:
             pass
+        
         raise NotImplementedError('Nope')
 
 

@@ -59,64 +59,6 @@ def calculate_run_matrix(
     
     return new_run_matrix
 
-
-
-def calculate_run_scenario(
-    process_demands: ArrayLike,     # (process, resource) -> float
-    scenario: ArrayLike             # (process, resource) -> +ve float
-) -> ArrayLike:  # run_scenario: process -> +ve float
-    """
-    Given the resource demands of each process, and the scenario to specify
-    the lower bound of each resource on each process node, calculate the lower bound of
-    the number of times that each process must run
-    """
-    run_scenario = np.zeros(scenario.shape[0:1])
-    for i, resource_bounds in enumerate(scenario):
-        resource_runs = []
-        for j, lower_bound in enumerate(resource_bounds):
-            amount_demanded = process_demands[i][j]
-            if amount_demanded==0:
-                expected_runs = 0
-            else:
-                expected_runs = lower_bound/amount_demanded
-            resource_runs.append(expected_runs)
-        run_scenario[i] = max(resource_runs)
-    return run_scenario
-
-def calculate_run_scenario_alt(
-    process_demands: ArrayLike,     # (process, resource) -> float
-    scenario: ArrayLike             # (process, process, resource) -> +ve float
-) -> ArrayLike:  # run_scenario: process -> +ve float
-    """
-    Given the resource demands of each process, and the scenario to specify
-    the lower bound of each resource edge, calculate the lower bound of
-    the number of times that each process must run
-    """
-    run_scenario = np.zeros(scenario.shape[0:1])
-    for i, in_process in enumerate(scenario):
-        for j, out_process in enumerate(in_process):
-            in_resource_runs = []
-            out_resource_runs = []
-            for k, resource_lower_bound in enumerate(out_process):
-                in_demand = process_demands[i][k]
-                out_demand = process_demands[j][k]
-                if in_demand ==0:
-                    in_expected_runs = 0
-                else:
-                    in_expected_runs = -resource_lower_bound/in_demand
-                if out_demand ==0:
-                    out_expected_runs = 0
-                else:
-                    out_expected_runs = resource_lower_bound/out_demand
-                in_resource_runs.append(in_expected_runs)
-                out_resource_runs.append(out_expected_runs)
-            in_max_runs = max(in_resource_runs)
-            out_max_runs = max(out_resource_runs)
-            run_scenario[i] = max(run_scenario[i], in_max_runs)
-            run_scenario[j] = max(run_scenario[j], out_max_runs)
-    return run_scenario
-
-
 def calculate_run_vector(
     run_matrix: ArrayLike,          # (process, process) -> +ve float
     run_scenario: ArrayLike         # process -> +ve float
@@ -138,15 +80,6 @@ def calculate_run_vector(
         
         return new_run_vector
     run_vector = iterate_on_run_vector(run_scenario)
-    #return np.array([3,1,1,2,4])
-    """
-    run_vector = run_scenario
-    for i in range(5):
-        new_run_vector = iterate_on_run_vector(run_vector)
-        if np.array_equal(new_run_vector, run_vector):
-            break
-        run_vector = new_run_vector
-    """
     return run_vector
 
 
@@ -182,57 +115,3 @@ def calculate_actual_resource_flow(
                 actual_resource_flow[i][j][k] = proportion*actual_resource[j][k]
 
     return actual_resource_flow
-
-
-def get_flow_slice(
-    actual_resource_flow: ArrayLike,    # (process, process, resource) -> +ve float
-    resource_index: int
-) -> ArrayLike:     # flow slice (process, process) -> +ve float
-    """
-    Get a slice of the actual resource flow given a resource index.
-    """
-    flow_slice = np.zeros(actual_resource_flow.shape[0:2])
-
-    for i, in_process in enumerate(actual_resource_flow):
-        for j, out_process in enumerate(in_process):
-            try:
-                resource_value = out_process[resource_index]
-            except IndexError:
-                raise ValueError('Resource index out of range')
-            flow_slice[i][j] = resource_value
-    return flow_slice
-
-
-def measure_resource_usage(
-    flow_slice: ArrayLike,          # (process, process) -> +ve float
-    measure: ArrayLike              # (process, process) -> bool
-) -> float:  # +ve float
-    """
-    Given a flow slice, calculate the total
-    number of resources that flow through measured edges.
-    """
-    total_resource_usage = 0
-    for i, in_process in enumerate(measure):
-        for j, count_bool in enumerate(in_process):
-            if count_bool:
-                total_resource_usage += flow_slice[i][j]
-
-    return total_resource_usage
-
-def alt_measure_resource_usage(
-    actual_resource_flow: ArrayLike,    # (process, process, resource) -> +ve float
-    measure: ArrayLike              # (process, process, resource) -> bool
-) -> ArrayLike: # resource_usage (resource) -> +ve float
-    """
-    Given the resource flow and which edges to measure, calculate the total resource
-    consumed for each edge.
-    """
-    resource_usage = np.zeros(measure.shape[2:3])
-    for i, in_process in enumerate(measure):
-        for j, out_process in enumerate(in_process):
-            for k, count_bool in enumerate(out_process):
-                if count_bool:
-                    resource_usage[k] += actual_resource_flow[i][j][k]
-    return resource_usage
-
-
