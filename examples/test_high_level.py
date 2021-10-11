@@ -122,8 +122,8 @@ scenario = Scenario(policy, scenario_elements) # type: ignore
 
 resource_usage = scenario.measure_flow(
     FlowMeasure(
-        resource_index['energy'],
-        in_process = processes_index['burn_pizza_box']
+        resource_index['pizza_box'],
+        out_process = processes_index['burn_pizza_box']
     )
 )
 

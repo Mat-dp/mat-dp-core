@@ -120,7 +120,6 @@ class Policy:
                 k = resource_index[policy_element.resource]
                 j = process_index[policy_element.process]
                 for incident_process, value in policy_element.incident_processes.items():
-                    print(process_index)
                     i = process_index[incident_process]
                     policy[i][j][k] = value
             return policy
