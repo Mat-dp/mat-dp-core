@@ -13,6 +13,8 @@ from dataclasses import dataclass
 
 ResourceName = str
 ProcessName = str
+ScenarioName = str
+PolicyName = str
 Unit = str
 
 class Resource:
@@ -69,13 +71,15 @@ class PolicyElement:
         return f'<PolicyElement for Process: {self.process}, Resource: {self.resource}>'
 
 class Policy:
+    name: PolicyName
     processes: List[Process]
     resources: List[Resource]
     process_demands: ArrayLike
     policy: ArrayLike
     run_matrix: ArrayLike
     elements: List[PolicyElement]
-    def __init__(self, elements: List[PolicyElement]):
+    def __init__(self, name: PolicyName, elements: List[PolicyElement]):
+        
         def get_processes_from_policy_elements(policy_elements: List[PolicyElement]) -> List[Process]:
             processes = []
             for policy_element in policy_elements:
@@ -123,16 +127,16 @@ class Policy:
                     i = process_index[incident_process]
                     policy[i][j][k] = value
             return policy
-
+        self.name = name
         self.processes = get_processes_from_policy_elements(elements)
         self.resources = get_resources_from_processes(self.processes)
-        self.process_demands = generate_process_demands(self.resources, self.processes)        
+        self.process_demands = generate_process_demands(self.resources, self.processes)
         self.policy = generate_policy(self.resources, self.processes, elements)
         self.run_matrix = calculate_run_matrix(self.process_demands, self.policy)
         self.elements = elements
 
     def __repr__(self):
-        return f'<Policy formed of : {self.elements}>'
+        return f'<Policy {self.name}>'
 
 class BaseFlow:
     def __init__(
@@ -202,6 +206,7 @@ class FlowMeasurement:
 class Scenario:
     def __init__(
         self,
+        name: ScenarioName,
         policy: Policy,
         elements: List[Union[ScenarioRun, ScenarioFlow]]
     ):
@@ -235,15 +240,12 @@ class Scenario:
         runs = []
         for element in elements:
             runs += convert_element_to_runs(element)
-
+        self.name = name
         self.policy = policy
         self.run_scenario = runs_to_run_scenario(runs, self.policy.processes)
         self.run_vector = calculate_run_vector(self.policy.run_matrix, self.run_scenario)
-        #print(self.run_vector)
         self.actual_resource = calculate_actual_resource(self.policy.process_demands, self.run_vector)
-        #print(self.actual_resource)
         self.actual_resource_flow = calculate_actual_resource_flow(self.actual_resource, demand_policy= policy.policy)
-        #print(self.actual_resource_flow)
 
     def measure_runs(self, measurement: RunMeasure) -> RunMeasurement:
         process_index = self.policy.processes.index(measurement.process)
@@ -267,4 +269,4 @@ class Scenario:
         units = measurement.resource.unit
         return FlowMeasurement(value, units)
     def __repr__(self):
-        return f'<Scenario for policy: {self.policy}, run_scenario: {self.run_scenario}>'
+        return f'<Scenario {self.name}>'
