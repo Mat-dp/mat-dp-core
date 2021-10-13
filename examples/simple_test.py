@@ -1,4 +1,4 @@
-from mat_dp_core.maths_core import Resources, Processes, EqConstraint, LeConstraint, GeConstraint, solve
+from mat_dp_core.maths_core import Resources, Processes, EqConstraint, LeConstraint, GeConstraint, solve, generate_process_demands, calculate_actual_resource
 
 resources = Resources()
 hay = resources.create("hay")
@@ -16,3 +16,8 @@ objective = arable_farm * 1 + dairy_farm * 1 + mcdonalds * 1
 
 solution = solve(resources, processes, [constraint], objective)
 print(solution)
+
+process_demands = generate_process_demands(resources, processes)
+actual_resource = calculate_actual_resource(process_demands, solution)
+print(actual_resource)
+

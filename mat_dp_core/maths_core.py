@@ -10,7 +10,6 @@ from typing import List, Optional, Tuple, Union
 
 ResourceName = str
 Unit = str
-Resource = int
 
 @dataclass
 class _Resource:
@@ -173,11 +172,10 @@ def solve(
         *constraints* reference only processes in *processes*
         *processes* reference only resources in *resources*
     """
-    # Add constraints for each process
 
+    # Add constraints for each process
     for process in processes.processes:
-        a = process.array
-        a.resize(len(processes), refcheck=False)    # TODO: find correct type for this
+        process.array.resize(len(processes), refcheck=False)    # TODO: find correct type for this
     # Pad arrays out to the correct size:
     # The processes weren't necessarily aware of the total number of
     # resources at the time they were created
@@ -269,3 +267,51 @@ def solve(
             raise NumericalDifficulties
         else:
             assert(False)
+
+def generate_process_demands(
+    resources: Resources,
+    processes: Processes
+) -> ArrayLike:
+
+    for process in processes.processes:
+        process.array.resize(len(resources), refcheck=False)    # TODO: find correct type for this
+    # Pad arrays out to the correct size:
+    # The processes weren't necessarily aware of the total number of
+    # resources at the time they were created
+    A_proc = np.array([process.array for process in processes.processes])
+    return A_proc
+
+
+def calculate_actual_resource(
+    process_demands: ArrayLike,     # (process, resource) -> float
+    run_vector: ArrayLike           # process -> +ve float
+    ) -> ArrayLike:  # actual_resource: (process, resource) -> +ve float
+    """
+    Given the resource demands of each process, and the number of times
+    that each process runs, calculate the number of resources that
+    are required by each process.
+    """
+    actual_resource = np.zeros_like(process_demands)
+    for i, runs in enumerate(run_vector):
+        actual_resource[i] = process_demands[i]*runs
+    return actual_resource
+
+"""
+Needs a rethink
+def calculate_actual_resource_flow(
+    actual_resource: ArrayLike,     # (process, resource) -> +ve float
+    demand_policy: ArrayLike        # (process, process, resource) -> +ve float
+    ) -> ArrayLike:  # actual_resource_flow: (process, process, resource) -> +ve float
+    ""
+    Given the number of resources that are required by each process, and the policy
+    that defines how processes connect, calculate the number of resources that
+    flow through each edge.
+    ""
+    actual_resource_flow = np.zeros_like(demand_policy)
+    for i, in_process in enumerate(demand_policy):
+        for j, out_process in enumerate(in_process):
+            for k, proportion in enumerate(out_process):
+                actual_resource_flow[i][j][k] = proportion*actual_resource[j][k]
+
+    return actual_resource_flow
+"""
