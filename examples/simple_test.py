@@ -12,7 +12,7 @@ mcdonalds = processes.create("mcdonalds", (cows, -1))
 constraint = EqConstraint("burger consumption", mcdonalds, 10)
 
 # Minimise total number of runs
-objective = arable_farm + dairy_farm + mcdonalds
+objective = arable_farm + dairy_farm + 2*mcdonalds
 
 solution = solve(resources, processes, [constraint], objective)
 print(solution)

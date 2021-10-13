@@ -72,6 +72,9 @@ class ProcessExpr:
             element.multiplier = element.multiplier * other
         return self
     
+    def __rmul__(self, other:float) -> "ProcessExpr":
+        return self*other
+    
     def __neg__(self):
         for element in self.processes:
             element.multiplier = -element.multiplier
@@ -106,6 +109,9 @@ class _Process:
     def __mul__(self, other: float) -> ProcessExpr:
         self._process_expr_elem.multiplier = other
         return ProcessExpr([self._process_expr_elem])
+    
+    def __rmul__(self, other:float) -> ProcessExpr:
+        return self*other
 
     def __add__(self, other: Union["_Process", ProcessExpr]) -> ProcessExpr:
         return self*1 + other*1
@@ -170,11 +176,11 @@ class _Constraint:
     def __init__(
             self,
             name: str,
-            constraint: Union[_Process, ProcessExpr, List[Tuple[int, float]]],
+            weighted_processes: Union[_Process, ProcessExpr, List[Tuple[int, float]]],
             bound: float):
         # TODO: investigate whether it would be nice to add a constraint by np.array
         self.name = name
-        self.array = pack_constraint(constraint)
+        self.array = pack_constraint(weighted_processes)
         self.bound = bound
 
 
@@ -192,12 +198,12 @@ class LeConstraint(_Constraint):
 
 def GeConstraint(
         name: str,
-        constraint: Union[ProcessExpr, List[Tuple[int, float]]],
+        weighted_processes: Union[ProcessExpr, List[Tuple[int, float]]],
         bound: float):
-    if isinstance(constraint, ProcessExpr):
-        processes = [(i.index, i.multiplier) for i in constraint.processes]
+    if isinstance(weighted_processes, ProcessExpr):
+        processes = [(i.index, i.multiplier) for i in weighted_processes.processes]
     else:
-        processes = constraint
+        processes = weighted_processes
     return LeConstraint(name, [(i, -v) for (i, v) in processes], -bound)
 
 
