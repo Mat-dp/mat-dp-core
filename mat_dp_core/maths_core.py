@@ -1,26 +1,32 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
-from inspect import stack
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy import linalg
 from scipy.optimize import linprog
 from sympy import Matrix
-from sys import exc_info
-from typing import Dict, List, Optional, Tuple, overload, Union
+from typing import List, Optional, Tuple, Union
 
 
 ResourceName = str
 Unit = str
 Resource = int
 
+@dataclass
+class _Resource:
+    name: ResourceName
+    index: int
+    unit: Unit = "ea"
+    def __repr__(self):
+        return f"<Resource: {self.name}>"
 
 class Resources:
-    resources: List[Tuple[ResourceName, Unit]] = []
+    resources: List[_Resource] = []
 
-    def create(self, name: ResourceName, unit: Unit = "ea") -> Resource:
-        self.resources.append((name, unit))
-        return len(self.resources) - 1
+    def create(self, name: ResourceName, unit: Unit = "ea") -> _Resource:
+        resource = _Resource(name = name, index = len(self.resources), unit = unit)
+        self.resources.append(resource)
+        return resource
 
     def __len__(self):
         return len(self.resources)
@@ -92,27 +98,33 @@ def GeConstraint(
 
 ProcessName = str
 
-
+@dataclass
 class _Process:
-    def __init__(self, process_index: int):
-        self.process_index = process_index
+    name: ProcessName
+    index: int
+    array: ArrayLike
 
     def __mul__(self, other: float) -> ProcessExpr:
-        return ProcessExpr([(self.process_index, other)])
+        return ProcessExpr([(self.index, other)])
+    
+    def __repr__(self) -> str:
+        return f"<Process: {self.name}>"
 
 
 class Processes:
     # Maps process names to resource constraints
-    processes: List[Tuple[ProcessName, ArrayLike]] = []
+    processes: List[_Process] = []
 
-    def create(self, name: ProcessName, *resources: Tuple[Resource, float]) \
+    def create(self, name: ProcessName, *resources: Tuple[_Resource, float]) \
             -> _Process:
-        res_max_index = max((i for (i, _) in resources)) + 1
+        res_max_index = max((resource.index for (resource, _) in resources)) + 1
         array = np.zeros(res_max_index)
-        for (i, v) in resources:
+        for (resource, v) in resources:
+            i = resource.index
             array[i] = v
-        self.processes.append((name, array))
-        return _Process(len(self.processes) - 1)
+        process = _Process(name = name, index = len(self.processes), array = array)
+        self.processes.append(process)
+        return process
 
     def __len__(self):
         return len(self.processes)
@@ -163,12 +175,13 @@ def solve(
     """
     # Add constraints for each process
 
-    for (_, a) in processes.processes:
+    for process in processes.processes:
+        a = process.array
         a.resize(len(processes), refcheck=False)    # TODO: find correct type for this
     # Pad arrays out to the correct size:
     # The processes weren't necessarily aware of the total number of
     # resources at the time they were created
-    A_proc = np.transpose(np.array([a for (_, a) in processes.processes]))
+    A_proc = np.transpose(np.array([process.array for process in processes.processes]))
     b_proc = np.zeros(len(processes))
 
     # Add constraints for each specified constraint
