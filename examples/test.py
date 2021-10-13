@@ -23,16 +23,16 @@ energy_grid = processes.create("energy grid", (energy, -2))
 constraints = [
     EqConstraint(
         "recycled pizza box ratio",
-        pizza_box_producer * 1 + recycled_pizza_box_producer * -1, 0),
+        pizza_box_producer - recycled_pizza_box_producer, 0),
     EqConstraint(
         "required energy",
-        energy_grid * 1, 8)
+        energy_grid, 8)
 ]
 
 # Minimise total number of runs
-objective = cardboard_producer * 1 + recycled_cardboard_producer * 1 + \
-            pizza_box_producer * 1 + recycled_pizza_box_producer * 1 + \
-            power_plant        * 1 + energy_grid                 * 1
+objective = cardboard_producer + recycled_cardboard_producer + \
+            pizza_box_producer + recycled_pizza_box_producer + \
+            power_plant + energy_grid
 
 solution = solve(resources, processes, constraints, objective)
 print(solution)

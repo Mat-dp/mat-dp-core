@@ -11,24 +11,43 @@ from typing import List, Optional, Tuple, Union
 ResourceName = str
 Unit = str
 
-@dataclass
+
 class _Resource:
-    name: ResourceName
     index: int
-    unit: Unit = "ea"
+    _parent: "Resources"
+
+    def __init__(self, index: int, parent: "Resources"):
+        self.index = index
+        self._parent = parent
+    
+    @property
+    def name(self) -> str:
+        return self._parent[self.index][0]
+    
+    @property
+    def unit(self) -> str:
+        return self._parent[self.index][1]
+
     def __repr__(self):
         return f"<Resource: {self.name}>"
 
 class Resources:
-    resources: List[_Resource] = []
+    resources: List[Tuple[ResourceName, Unit]] = []
 
     def create(self, name: ResourceName, unit: Unit = "ea") -> _Resource:
-        resource = _Resource(name = name, index = len(self.resources), unit = unit)
-        self.resources.append(resource)
-        return resource
+        resource_out = _Resource(index = len(self.resources), parent = self)
+        resource_inner = (name, unit,)
+        self.resources.append(resource_inner)
+        return resource_out
 
     def __len__(self):
         return len(self.resources)
+    
+    def __getitem__(self, arg):
+        return self.resources[arg]
+
+    def __iter__(self):
+        return iter(self.resources)
 
 @dataclass
 class ProcessExprElement:
@@ -46,34 +65,47 @@ class ProcessExpr:
         if isinstance(other, ProcessExpr):
             return ProcessExpr(self.processes + other.processes)
         else:
-            return ProcessExpr(self.processes + [other.process_expr_elem])
+            return ProcessExpr(self.processes + [other._process_expr_elem])
     
     def __mul__(self, other: float) -> "ProcessExpr":
         for element in self.processes:
             element.multiplier = element.multiplier * other
         return self
+    
+    def __neg__(self):
+        for element in self.processes:
+            element.multiplier = -element.multiplier
+        return self
 
+
+    def __sub__(self, other):
+        return self + -other
+    
 ProcessName = str
 
-
 class _Process:
-    name: ProcessName
+    _parent: "Processes"
     index: int
-    array: ArrayLike
-    process_expr_elem: ProcessExprElement
+    _process_expr_elem: ProcessExprElement
     def __init__(
         self, 
-        name: ProcessName,
         index: int,
-        array: ArrayLike
+        parent: "Processes"
     ):
-        self.name = name
-        self.index = index
-        self.array = array
-        self.process_expr_elem = ProcessExprElement(index, 1)
+        self._parent = parent
+        self._process_expr_elem = ProcessExprElement(index, 1)
+    
+    @property
+    def name(self) -> str:
+        return self._parent[self.index][0]
+    
+    @property
+    def array(self) -> ArrayLike:
+        return self._parent[self.index][1]
+    
     def __mul__(self, other: float) -> ProcessExpr:
-        self.process_expr_elem.multiplier = other
-        return ProcessExpr([self.process_expr_elem])
+        self._process_expr_elem.multiplier = other
+        return ProcessExpr([self._process_expr_elem])
 
     def __add__(self, other: Union["_Process", ProcessExpr]) -> ProcessExpr:
         return self*1 + other*1
@@ -81,12 +113,43 @@ class _Process:
     def __repr__(self) -> str:
         return f"<Process: {self.name}>"
 
+    def __neg__(self):
+        return self*-1
+
+    def __sub__(self, other):
+        return self + -other
+
+class Processes:
+    # Maps process names to resource demands
+    processes: List[Tuple[ProcessName, ArrayLike]] = []
+
+    def create(self, name: ProcessName, *resources: Tuple[_Resource, float]) \
+            -> _Process:
+        res_max_index = max((resource.index for (resource, _) in resources)) + 1
+        array = np.zeros(res_max_index)
+        for (resource, v) in resources:
+            i = resource.index
+            array[i] = v
+        process_inner = (name, array)
+        process_out = _Process(index = len(self.processes), parent = self)
+        self.processes.append(process_inner)
+        return process_out
+
+    def __len__(self):
+        return len(self.processes)
+
+    def __getitem__(self, arg):
+        return self.processes[arg]
+    
+    def __iter__(self):
+        return iter(self.processes)
+    
 
 def pack_constraint(
         constraint: Union[_Process, ProcessExpr, List[Tuple[int, float]]]
         ) -> ArrayLike:
     if isinstance(constraint, _Process):
-        processes = [(constraint.process_expr_elem.index, constraint.process_expr_elem.multiplier)]
+        processes = [(constraint._process_expr_elem.index, constraint._process_expr_elem.multiplier)]
     elif isinstance(constraint, ProcessExpr):
         processes = [(i.index, i.multiplier) for i in constraint.processes]
     else:
@@ -140,23 +203,7 @@ def GeConstraint(
 
 
 
-class Processes:
-    # Maps process names to resource constraints
-    processes: List[_Process] = []
 
-    def create(self, name: ProcessName, *resources: Tuple[_Resource, float]) \
-            -> _Process:
-        res_max_index = max((resource.index for (resource, _) in resources)) + 1
-        array = np.zeros(res_max_index)
-        for (resource, v) in resources:
-            i = resource.index
-            array[i] = v
-        process = _Process(name = name, index = len(self.processes), array = array)
-        self.processes.append(process)
-        return process
-
-    def __len__(self):
-        return len(self.processes)
 
 
 class IterationLimitReached(Exception):
@@ -204,13 +251,13 @@ def solve(
     """
 
     # Add constraints for each process
-    for process in processes.processes:
-        process.array.resize(len(processes), refcheck=False)    # TODO: find correct type for this
+    for process in processes:
+        process[1].resize(len(resources), refcheck=False)    # TODO: find correct type for this
     # Pad arrays out to the correct size:
     # The processes weren't necessarily aware of the total number of
     # resources at the time they were created
-    A_proc = np.transpose(np.array([process.array for process in processes.processes]))
-    b_proc = np.zeros(len(processes))
+    A_proc = np.transpose(np.array([process[1] for process in processes.processes]))
+    b_proc = np.zeros(len(resources))
 
     # Add constraints for each specified constraint
 
@@ -303,12 +350,12 @@ def generate_process_demands(
     processes: Processes
 ) -> ArrayLike:
 
-    for process in processes.processes:
-        process.array.resize(len(resources), refcheck=False)    # TODO: find correct type for this
+    for process in processes:
+        process[1].resize(len(resources), refcheck=False)    # TODO: find correct type for this
     # Pad arrays out to the correct size:
     # The processes weren't necessarily aware of the total number of
     # resources at the time they were created
-    A_proc = np.array([process.array for process in processes.processes])
+    A_proc = np.array([process[1] for process in processes.processes])
     return A_proc
 
 
