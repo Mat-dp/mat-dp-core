@@ -67,5 +67,3 @@ def scenarios_to_csv(
             scenario_sections = scenario.name.split(scenario_section_delimiter)
             values = [i, scenario.policy.name] + scenario_sections + out_flows
             file_writer.writerow(values)
-
-    
