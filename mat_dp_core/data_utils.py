@@ -31,8 +31,8 @@ def generate_scenarios(
     return scenarios
 
 
-
-def scenarios_to_csv(
+# e.g. dfE_tech_by_country
+def scenarios_to_csv_by_process(
     scenarios: List[Scenario],
     resource: str = 'energy',
     policy_heading: str = 'Year',
@@ -69,3 +69,15 @@ def scenarios_to_csv(
             file_writer.writerow(values)
 
     
+# e.g.E_matbytech_bycountry.csv
+def scenarios_to_csv_by_tech_by_resource(
+    scenarios: List[Scenario],
+    resource: str = 'energy',
+    process_heading: str = 'tech',
+    policy_heading: str = 'Year',
+    scenario_heading_sections: List[str] = ['Scenario', 'Country'],
+    scenario_section_delimiter: str = ':',
+    csv_file_loc: str = '../../E_matbytech_bycountry.csv',
+    measure_in: bool = True
+):
+    pass

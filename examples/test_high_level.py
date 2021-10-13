@@ -8,7 +8,7 @@ from mat_dp_core import (
     FlowMeasure
 )
 from mat_dp_core.utils import generate_index, generate_resource_index, generate_process_index
-from mat_dp_core.data_utils import scenarios_to_csv, generate_scenarios
+from mat_dp_core.data_utils import scenarios_to_csv_by_process, generate_scenarios
 resources = [
     Resource('cardboard', unit = 'm2'),
     Resource('recycled_cardboard', unit = 'm2'),
@@ -142,5 +142,6 @@ scenarios = generate_scenarios(
     10,
     out_process = processes_index['burn_pizza_box']
 )
-csv_out = scenarios_to_csv(scenarios)
+csv_out = scenarios_to_csv_by_process(scenarios)
+
 print(csv_out)
