@@ -30,22 +30,65 @@ class Resources:
     def __len__(self):
         return len(self.resources)
 
+@dataclass
+class ProcessExprElement:
+    index: int
+    multiplier: float
+
 
 class ProcessExpr:
-    processes: List[Tuple[int, float]]
+    processes: List[ProcessExprElement]
 
-    def __init__(self, processes: List[Tuple[int, float]]):
+    def __init__(self, processes: List[ProcessExprElement]):
         self.processes = processes
 
-    def __add__(self, other: "ProcessExpr") -> "ProcessExpr":
-        return ProcessExpr(self.processes + other.processes)
+    def __add__(self, other: Union["ProcessExpr", "_Process"]) -> "ProcessExpr":
+        if isinstance(other, ProcessExpr):
+            return ProcessExpr(self.processes + other.processes)
+        else:
+            return ProcessExpr(self.processes + [other.process_expr_elem])
+    
+    def __mul__(self, other: float) -> "ProcessExpr":
+        for element in self.processes:
+            element.multiplier = element.multiplier * other
+        return self
+
+ProcessName = str
+
+
+class _Process:
+    name: ProcessName
+    index: int
+    array: ArrayLike
+    process_expr_elem: ProcessExprElement
+    def __init__(
+        self, 
+        name: ProcessName,
+        index: int,
+        array: ArrayLike
+    ):
+        self.name = name
+        self.index = index
+        self.array = array
+        self.process_expr_elem = ProcessExprElement(index, 1)
+    def __mul__(self, other: float) -> ProcessExpr:
+        self.process_expr_elem.multiplier = other
+        return ProcessExpr([self.process_expr_elem])
+
+    def __add__(self, other: Union["_Process", ProcessExpr]) -> ProcessExpr:
+        return self*1 + other*1
+
+    def __repr__(self) -> str:
+        return f"<Process: {self.name}>"
 
 
 def pack_constraint(
-        constraint: Union[ProcessExpr, List[Tuple[int, float]]]
+        constraint: Union[_Process, ProcessExpr, List[Tuple[int, float]]]
         ) -> ArrayLike:
-    if isinstance(constraint, ProcessExpr):
-        processes = constraint.processes
+    if isinstance(constraint, _Process):
+        processes = [(constraint.process_expr_elem.index, constraint.process_expr_elem.multiplier)]
+    elif isinstance(constraint, ProcessExpr):
+        processes = [(i.index, i.multiplier) for i in constraint.processes]
     else:
         processes = constraint
 
@@ -64,7 +107,7 @@ class _Constraint:
     def __init__(
             self,
             name: str,
-            constraint: Union[ProcessExpr, List[Tuple[int, float]]],
+            constraint: Union[_Process, ProcessExpr, List[Tuple[int, float]]],
             bound: float):
         # TODO: investigate whether it would be nice to add a constraint by np.array
         self.name = name
@@ -89,25 +132,12 @@ def GeConstraint(
         constraint: Union[ProcessExpr, List[Tuple[int, float]]],
         bound: float):
     if isinstance(constraint, ProcessExpr):
-        processes = constraint.processes
+        processes = [(i.index, i.multiplier) for i in constraint.processes]
     else:
         processes = constraint
     return LeConstraint(name, [(i, -v) for (i, v) in processes], -bound)
 
 
-ProcessName = str
-
-@dataclass
-class _Process:
-    name: ProcessName
-    index: int
-    array: ArrayLike
-
-    def __mul__(self, other: float) -> ProcessExpr:
-        return ProcessExpr([(self.index, other)])
-    
-    def __repr__(self) -> str:
-        return f"<Process: {self.name}>"
 
 
 class Processes:
