@@ -3,10 +3,12 @@ from mat_dp_core.maths_core import (
     Processes,
     calculate_actual_resource,
     generate_process_demands,
+    _Process,
+    _Resource
 )
 from numpy.typing import ArrayLike
-from typing import Union
-
+from typing import Union, Optional
+import numpy as np
 ResourceMeasurement = Union[float, ArrayLike]
 
 # Definitions
@@ -42,8 +44,8 @@ class BaseResourceMeasure(Measure):
 class ActualResourceMeasure(BaseResourceMeasure):
     def __call__(
         self,
-        process_index = None,
-        resource_index = None
+        process_index: Optional[int] = None,
+        resource_index: Optional[int] = None
     ) -> ResourceMeasurement:
         if process_index is None and resource_index is None:
             return self.actual_resource
@@ -71,12 +73,12 @@ class CumulativeResourceMeasure(BaseResourceMeasure):
             process_demands,
             actual_resource
         )
-        # TODO Initialise cumulative matrix
+        self.cumulative_resource = np.empty((len(processes), len(resources)))
 
     def __call__(
         self,
-        process_index = None,
-        resource_index = None
+        process_index: Optional[int] = None,
+        resource_index: Optional[int] = None
     ) -> ResourceMeasurement:
         raise NotImplementedError('CumulativeResourceMeasure not implemented')
 
@@ -94,9 +96,9 @@ class FlowMeasure(Measure):
         # TODO Initialise flow matrix
     def __call__(
         self,
-        in_process_index = None,
-        out_process_index = None,
-        resource_index = None
+        in_process_index: Optional[int] = None,
+        out_process_index: Optional[int] = None,
+        resource_index: Optional[int] = None
     ) -> ResourceMeasurement:
         raise NotImplementedError('FlowMeasure not implemented')
 
@@ -105,8 +107,8 @@ class FlowMeasure(Measure):
 class MeasureManager:
     def __init__(
         self,
-        resources,
-        processes,
+        resources: Resources,
+        processes: Processes,
         run_vector: ArrayLike,
     ) -> None:
         process_demands = generate_process_demands(resources, processes)
@@ -136,22 +138,56 @@ class MeasureManager:
 
     def make_actual_resource_measure(
         self,
-        process_index = None,
-        resource_index = None
+        process: Optional[Union[_Process, int]] = None,
+        resource: Optional[Union[_Resource, int]] = None
     ):
+        if isinstance(process, _Process):
+            process_index = process.index
+        else:
+            process_index = process
+        
+        if isinstance(resource, _Resource):
+            resource_index = resource.index
+        else:
+            resource_index = resource
+        
         return self.actual_res_measure(process_index, resource_index)
 
     def make_cumulative_resource_measure(
         self,
-        process_index = None,
-        resource_index = None
+        process: Optional[Union[_Process, int]] = None,
+        resource: Optional[Union[_Resource, int]] = None
     ):
+        if isinstance(process, _Process):
+            process_index = process.index
+        else:
+            process_index = process
+        
+        if isinstance(resource, _Resource):
+            resource_index = resource.index
+        else:
+            resource_index = resource
+
         return self.cumulative_res_measure(process_index, resource_index)
     
     def make_flow_measure(
         self,
-        in_process_index = None,
-        out_process_index = None,
-        resource_index = None
+        in_process: Optional[Union[_Process, int]] = None,
+        out_process: Optional[Union[_Process, int]] = None,
+        resource: Optional[Union[_Resource, int]] = None
     ):
+        if isinstance(in_process, _Process):
+            in_process_index = in_process.index
+        else:
+            in_process_index = in_process
+        
+        if isinstance(out_process, _Process):
+            out_process_index = out_process.index
+        else:
+            out_process_index = out_process
+        
+        if isinstance(resource, _Resource):
+            resource_index = resource.index
+        else:
+            resource_index = resource
         return self.flow_measure(in_process_index, out_process_index, resource_index)
