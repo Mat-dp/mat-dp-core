@@ -87,3 +87,5 @@ class ResourceConstraint(EqConstraint):
             name = f"resource_{phrase}_{resource_name}_fixed_at_{resource_bound}{units}for_process{process_name}"
         
         super().__init__(name, weighted_processes, no_runs)
+
+
