@@ -96,6 +96,7 @@ class _Process:
         parent: "Processes"
     ):
         self._parent = parent
+        self.index = index
         self._process_expr_elem = ProcessExprElement(index, 1)
     
     @property
