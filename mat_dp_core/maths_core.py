@@ -30,6 +30,9 @@ class _Resource:
 
     def __repr__(self):
         return f"<Resource: {self.name}>"
+    
+    def __int__(self):
+        return self.index
 
 class Resources:
     resources: List[Tuple[ResourceName, Unit]] = []
@@ -125,6 +128,9 @@ class _Process:
 
     def __sub__(self, other):
         return self + -other
+    
+    def __int__(self):
+        return self.index
 
 class Processes:
     # Maps process names to resource demands
@@ -240,130 +246,210 @@ class NumericalDifficulties(Exception):
     pass
 
 
-def solve(
-        resources: Resources,
-        processes: Processes,
-        constraints: Sequence[Union[EqConstraint, LeConstraint]],
-        objective: Optional[ProcessExpr] = None,
-        maxiter: int = None):
-    """
-    Given a system of processes, resources, and constraints, and an optional
-    objective, attempt to solve the system.
+class Measure:
+    _resources: Resources
+    _processes: Processes
+    _run_vector: ArrayLike      # cols: processes
+    _process_demands: ArrayLike # cols: processes, rows: resources (resources, processes)
 
-    If the system is under- or over-constrained, will report so
+    _resource_matrix: ArrayLike
+    _flow_matrix: ArrayLike     # (process, process, resource)
+    _cumulative_resource_matrix: ArrayLike
 
-    Preconditions:
-        *constraints* reference only processes in *processes*
-        *processes* reference only resources in *resources*
-    """
+    def __init__(
+            self,
+            resources: Resources,
+            processes: Processes,
+            constraints: Sequence[Union[EqConstraint, LeConstraint]],
+            objective: Optional[ProcessExpr] = None,
+            maxiter: int = None):
+        self._resources = resources
+        self._processes = processes
+        self._run_vector = self._solve(
+                resources,
+                processes,
+                constraints,
+                objective,
+                maxiter)
+        _resource_matrix = None
+        _flow_matrix = np.empty((len(processes), len(processes), len(resources)))
+        _cumulative_resource_matrix = np.empty((len(processes), len(resources)))
 
-    # Add constraints for each process
-    for process in processes:
-        process[1].resize(len(resources), refcheck=False)    # TODO: find correct type for this
-    # Pad arrays out to the correct size:
-    # The processes weren't necessarily aware of the total number of
-    # resources at the time they were created
-    A_proc = np.transpose(np.array([process[1] for process in processes.processes]))
-    b_proc = np.zeros(len(resources))
+    def _generate_resource_matrix(self):
+        self._resource_matrix = \
+            np.full((len(self._resources), len(self._processes)), self._run_vector) \
+            * self._process_demands
 
-    # Add constraints for each specified constraint
+    def measure_run(self, process: Union[_Process, int]) -> float:
+        return self._run_vector[int(process)]
 
-    Al_eq = []
-    bl_eq = []
-    Al_le = []
-    bl_le = []
-    eq_constraints = []
-    le_constraints = []
-    for constraint in constraints:
-        constraint.array.resize(len(processes))    # TODO: find correct type for this
-        if isinstance(constraint, EqConstraint):
-            eq_constraints.append(constraint)
-            Al_eq.append(constraint.array)
-            bl_eq.append(constraint.bound)
-        elif isinstance(constraint, LeConstraint):
-            le_constraints.append(constraint)
-            Al_le.append(constraint.array)
-            bl_le.append(constraint.bound)
-        else:
-            assert(False)
-    A_eq = np.array(Al_eq)
-    b_eq = np.array(bl_eq)
-    A_le = np.array(Al_le)
-    b_le = np.array(bl_le)
+    # TODO: return some labelled measurement wrapper of the array slice
+    def measure_run_slice(self):
+        return self._run_vector
 
-    if objective is None:
-        try:
-            # TODO: confirm that the inequalities were correctly satisfied
-            return linalg.solve(A_proc + A_eq + A_le, b_proc, b_eq + b_le)
-        except linalg.LinAlgError:
-            # Determine whether the solution was under- or overconstrained
-            # https://towardsdatascience.com/how-do-you-use-numpy-scipy-and-sympy-to-solve-systems-of-linear-equations-9afed2c388af
-            augmented_A = Matrix(
-                [A + [b] for A, b in zip(A_eq, b_eq)] +
-                [A + [b] for A, b in zip(A_le, b_le)]
-            )
-            rref = augmented_A.rref()
-            if len(rref[1]) < len(rref[0]):
-                # Final row of RREF is zero if underconstrained
-                # TODO: calculate how the system is ill-specified by inspecting
-                # the matrix in RREF
-                raise Underconstrained()
+    # TODO: return units
+    def measure_resource(
+            self,
+            process: Union[_Process, int],
+            resource: Union[_Resource, int]) -> float:
+        if self._resource_matrix is None:
+            self._generate_resource_matrix()
+        return self._resource_matrix[int(resource), int(process)]
+    
+    # TODO: return some labelled measurement wrapper of the array slice
+    def measure_resource_slice(
+            self,
+            process: Optional[Union[_Process, int]],
+            resource: Optional[Union[_Resource, int]]) -> ArrayLike:
+        if self._resource_matrix is None:
+            self._generate_resource_matrix()
+
+        process_index = None if process is None else int(process)
+        resource_index = None if resource is None else int(resource)
+
+        return np.transpose(self._resource_matrix[resource_index:resource_index])[process_index:process_index]
+        
+    def measure_flow(
+            self,
+            process: Union[_Process, int],
+            process: Union[_Process, int],
+            resource: Union[_Resource, int]) -> float:
+        raise NotImplementedError
+
+    # TODO: return some labelled measurement wrapper of the array slice
+    def measure_flow_slice(
+            self,
+            process: Optional[Union[_Process, int]],
+            process: Optional[Union[_Process, int]],
+            resource: Optional[Union[_Resource, int]]) -> ArrayLike:
+        raise NotImplementedError
+        
+    def measure_cumulative_resource(
+            self,
+            process: Union[_Process, int],
+            resource: Union[_Resource, int]) -> float:
+        raise NotImplementedError
+
+    # TODO: return some labelled measurement wrapper of the array slice
+    def measure_cumulative_resource_slice(
+            self,
+            process: Optional[Union[_Process, int]],
+            resource: Optional[Union[_Resource, int]]) -> ArrayLike:
+        raise NotImplementedError
+
+    def _solve(
+            self,
+            resources: Resources,
+            processes: Processes,
+            constraints: Sequence[Union[EqConstraint, LeConstraint]],
+            objective: Optional[ProcessExpr],
+            maxiter: int):
+        """
+        Given a system of processes, resources, and constraints, and an optional
+        objective, attempt to solve the system.
+
+        If the system is under- or over-constrained, will report so
+
+        Preconditions:
+            *constraints* reference only processes in *processes*
+            *processes* reference only resources in *resources*
+        """
+
+        # Add constraints for each process
+        for process in processes:
+            process[1].resize(len(resources), refcheck=False)    # TODO: find correct type for this
+        # Pad arrays out to the correct size:
+        # The processes weren't necessarily aware of the total number of
+        # resources at the time they were created
+        A_proc = np.transpose(np.array([process[1] for process in processes.processes]))
+        self._process_demands = A_proc
+        b_proc = np.zeros(len(resources))
+
+        # Add constraints for each specified constraint
+
+        Al_eq = []
+        bl_eq = []
+        Al_le = []
+        bl_le = []
+        eq_constraints = []
+        le_constraints = []
+        for constraint in constraints:
+            constraint.array.resize(len(processes))    # TODO: find correct type for this
+            if isinstance(constraint, EqConstraint):
+                eq_constraints.append(constraint)
+                Al_eq.append(constraint.array)
+                bl_eq.append(constraint.bound)
+            elif isinstance(constraint, LeConstraint):
+                le_constraints.append(constraint)
+                Al_le.append(constraint.array)
+                bl_le.append(constraint.bound)
             else:
-                raise Overconstrained([])
-    else:
-        # Build objective vector
-        c = pack_constraint(objective)
+                assert(False)
+        A_eq = np.array(Al_eq)
+        b_eq = np.array(bl_eq)
+        A_le = np.array(Al_le)
+        b_le = np.array(bl_le)
 
-        # Solve
-        # TODO: optimise with callback
-        # TODO: optimise method
-
-        options = {}
-        if maxiter is not None:
-            options["maxiter"] = maxiter
-
-        res = linprog(
-                c,
-                A_le if len(A_le) > 0 else None,
-                b_le if len(b_le) > 0 else None,
-                np.concatenate((A_proc, A_eq)),
-                np.concatenate((b_proc, b_eq)),
-                options=options)
-
-        if res.status == 0:
-            # Optimization terminated successfully
-            return res.x
-        elif res.status == 1:
-            # Iteration limit reached
-            raise IterationLimitReached(res.nit)
-        elif res.status == 2:
-            # Problem appears to be infeasible
-            raise Overconstrained(
-                    [(eq_constraints[i], v) for i, v in enumerate(res.con)
-                        if v != 0] +
-                    [(le_constraints[i], v) for i, v in enumerate(res.slack)
-                        if v < 0])  # TODO: sort out typing warning
-        elif res.status == 3:
-            # Problem appears to be unbounded
-            raise UnboundedSolution
-        elif res.status == 4:
-            # Numerical difficulties encountered
-            raise NumericalDifficulties
+        if objective is None:
+            try:
+                # TODO: confirm that the inequalities were correctly satisfied
+                return linalg.solve(A_proc + A_eq + A_le, b_proc, b_eq + b_le)
+            except linalg.LinAlgError:
+                # Determine whether the solution was under- or overconstrained
+                # https://towardsdatascience.com/how-do-you-use-numpy-scipy-and-sympy-to-solve-systems-of-linear-equations-9afed2c388af
+                augmented_A = Matrix(
+                    [A + [b] for A, b in zip(A_eq, b_eq)] +
+                    [A + [b] for A, b in zip(A_le, b_le)]
+                )
+                rref = augmented_A.rref()
+                if len(rref[1]) < len(rref[0]):
+                    # Final row of RREF is zero if underconstrained
+                    # TODO: calculate how the system is ill-specified by inspecting
+                    # the matrix in RREF
+                    raise Underconstrained()
+                else:
+                    raise Overconstrained([])
         else:
-            assert(False)
+            # Build objective vector
+            c = pack_constraint(objective)
 
-def generate_process_demands(
-    resources: Resources,
-    processes: Processes
-) -> ArrayLike:
+            # Solve
+            # TODO: optimise with callback
+            # TODO: optimise method
 
-    for process in processes:
-        process[1].resize(len(resources), refcheck=False)    # TODO: find correct type for this
-    # Pad arrays out to the correct size:
-    # The processes weren't necessarily aware of the total number of
-    # resources at the time they were created
-    A_proc = np.array([process[1] for process in processes.processes])
-    return A_proc
+            options = {}
+            if maxiter is not None:
+                options["maxiter"] = maxiter
+
+            res = linprog(
+                    c,
+                    A_le if len(A_le) > 0 else None,
+                    b_le if len(b_le) > 0 else None,
+                    np.concatenate((A_proc, A_eq)),
+                    np.concatenate((b_proc, b_eq)),
+                    options=options)
+
+            if res.status == 0:
+                # Optimization terminated successfully
+                return res.x
+            elif res.status == 1:
+                # Iteration limit reached
+                raise IterationLimitReached(res.nit)
+            elif res.status == 2:
+                # Problem appears to be infeasible
+                raise Overconstrained(
+                        [(eq_constraints[i], v) for i, v in enumerate(res.con)
+                            if v != 0] +
+                        [(le_constraints[i], v) for i, v in enumerate(res.slack)
+                            if v < 0])  # TODO: sort out typing warning
+            elif res.status == 3:
+                # Problem appears to be unbounded
+                raise UnboundedSolution
+            elif res.status == 4:
+                # Numerical difficulties encountered
+                raise NumericalDifficulties
+            else:
+                assert(False)
 
 
 def calculate_actual_resource(
