@@ -1,177 +1,198 @@
-from collections.abc import Sequence
 from dataclasses import dataclass
+from itertools import starmap
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy import linalg
 from scipy.optimize import linprog
 from sympy import Matrix
-from typing import List, Optional, Tuple, Union
+from typing import MutableSequence, Optional, overload, Sequence, Tuple, Union
 
 
 ResourceName = str
 Unit = str
 
 
-class _Resource:
+class Resource:
     index: int
     _parent: "Resources"
 
     def __init__(self, index: int, parent: "Resources"):
         self.index = index
         self._parent = parent
-    
+
     @property
     def name(self) -> str:
-        return self._parent[self.index][0]
-    
+        return self._parent._resources[self.index][0]
+
     @property
     def unit(self) -> str:
-        return self._parent[self.index][1]
+        return self._parent._resources[self.index][1]
 
     def __repr__(self):
         return f"<Resource: {self.name}>"
-    
-    def __int__(self):
-        return self.index
+
 
 class Resources:
-    resources: List[Tuple[ResourceName, Unit]] = []
+    _resources: MutableSequence[Tuple[ResourceName, Unit]] = []
 
-    def create(self, name: ResourceName, unit: Unit = "ea") -> _Resource:
-        resource_out = _Resource(index = len(self.resources), parent = self)
-        resource_inner = (name, unit,)
-        self.resources.append(resource_inner)
+    def create(self, name: ResourceName, unit: Unit = "ea") -> Resource:
+        """
+        Create a resource
+        """
+        resource_out = self[len(self._resources)]
+        self._resources.append(
+            (
+                name,
+                unit,
+            )
+        )
         return resource_out
 
+    def load(self, resources: Sequence[Tuple[ResourceName, Unit]]):
+        """
+        Load some additional resources in bulk
+        """
+        starmap(self.create, resources)
+
+    def dump(self) -> Sequence[Tuple[ResourceName, Unit]]:
+        """
+        Dump resources in bulk
+        """
+        return self._resources
+
     def __len__(self):
-        return len(self.resources)
-    
+        return len(self._resources)
+
     def __getitem__(self, arg):
-        return self.resources[arg]
+        return Resource(index=arg, parent=self)
 
     def __iter__(self):
-        return iter(self.resources)
-
-@dataclass
-class ProcessExprElement:
-    index: int
-    multiplier: float
+        return map(self.__getitem__, range(len(self)))
 
 
 class ProcessExpr:
-    processes: List[ProcessExprElement]
+    _processes: Sequence["Process"]
 
-    def __init__(self, processes: List[ProcessExprElement]):
-        self.processes = processes
+    def __init__(self, _processes: Sequence["Process"]):
+        self._processes = _processes
 
-    def __add__(self, other: Union["ProcessExpr", "_Process"]) -> "ProcessExpr":
+    def __add__(self, other: Union["ProcessExpr", "Process"]) -> "ProcessExpr":
         if isinstance(other, ProcessExpr):
-            return ProcessExpr(self.processes + other.processes)
+            return ProcessExpr(self._processes + other._processes)
         else:
-            return ProcessExpr(self.processes + [other._process_expr_elem])
-    
+            return ProcessExpr(self._processes + [other])
+
     def __mul__(self, other: float) -> "ProcessExpr":
-        for element in self.processes:
+        if other == 1:
+            return self
+        for element in self._processes:
             element.multiplier = element.multiplier * other
         return self
-    
-    def __rmul__(self, other:float) -> "ProcessExpr":
-        return self*other
-    
+
+    def __rmul__(self, other: float) -> "ProcessExpr":
+        return self * other
+
     def __neg__(self):
-        for element in self.processes:
+        for element in self._processes:
             element.multiplier = -element.multiplier
         return self
 
-
     def __sub__(self, other):
         return self + -other
-    
-ProcessName = str
-
-class _Process:
-    _parent: "Processes"
-    index: int
-    _process_expr_elem: ProcessExprElement
-    def __init__(
-        self, 
-        index: int,
-        parent: "Processes"
-    ):
-        self._parent = parent
-        self.index = index
-        self._process_expr_elem = ProcessExprElement(index, 1)
-    
-    @property
-    def name(self) -> str:
-        return self._parent[self.index][0]
-    
-    @property
-    def array(self) -> ArrayLike:
-        return self._parent[self.index][1]
-    
-    def __mul__(self, other: float) -> ProcessExpr:
-        self._process_expr_elem.multiplier = other
-        return ProcessExpr([self._process_expr_elem])
-    
-    def __rmul__(self, other:float) -> ProcessExpr:
-        return self*other
-
-    def __add__(self, other: Union["_Process", ProcessExpr]) -> ProcessExpr:
-        return self*1 + other*1
 
     def __repr__(self) -> str:
-        return f"<Process: {self.name}>"
+        return "<ProcessExpr {}>".format(" + ".join(map(format, self._processes)))
+
+    def __format__(self, format_spec: str) -> str:
+        return "{}".format(" + ".join(map(format, self._processes)))
+
+    def __getitem__(self, arg):
+        return self._processes[arg]
+
+    def __len__(self):
+        return len(self._processes)
+
+    def __iter__(self):
+        return map(self.__getitem__, range(len(self)))
+
+
+ProcessName = str
+
+
+class Process:
+    _parent: "Processes"
+    index: int
+    multiplier: float
+
+    def __init__(self, index: int, parent: "Processes"):
+        self._parent = parent
+        self.index = index
+        self.multiplier = 1
+
+    @property
+    def name(self) -> str:
+        return self._parent._processes[self.index][0]
+
+    @property
+    def array(self) -> ArrayLike:
+        return self._parent._processes[self.index][1]
+
+    def __mul__(self, other: float) -> ProcessExpr:
+        self.multiplier *= other
+        return ProcessExpr([self])
+
+    def __rmul__(self, other: float) -> ProcessExpr:
+        return self * other
+
+    def __add__(self, other: Union["Process", ProcessExpr]) -> ProcessExpr:
+        return self * 1 + other * 1
+
+    def __repr__(self) -> str:
+        return f"<Process: {self.name}" + (
+            ">" if self.multiplier == 1 else " * {self.multiplier}>"
+        )
+
+    def __format__(self, format_spec: str) -> str:
+        return f"{self.name}{'' if self.multiplier == 1 else f' * {self.multiplier}'}"
 
     def __neg__(self):
-        return self*-1
+        return self * -1
 
     def __sub__(self, other):
         return self + -other
-    
-    def __int__(self):
-        return self.index
+
 
 class Processes:
     # Maps process names to resource demands
-    processes: List[Tuple[ProcessName, ArrayLike]] = []
+    _processes: MutableSequence[Tuple[ProcessName, ArrayLike]] = []
 
-    def create(self, name: ProcessName, *resources: Tuple[_Resource, float]) \
-            -> _Process:
+    def create(self, name: ProcessName, *resources: Tuple[Resource, float]) -> Process:
         res_max_index = max((resource.index for (resource, _) in resources)) + 1
         array = np.zeros(res_max_index)
         for (resource, v) in resources:
             i = resource.index
             array[i] = v
         process_inner = (name, array)
-        process_out = _Process(index = len(self.processes), parent = self)
-        self.processes.append(process_inner)
+        process_out = self[len(self._processes)]
+        self._processes.append(process_inner)
         return process_out
 
     def __len__(self):
-        return len(self.processes)
+        return len(self._processes)
 
     def __getitem__(self, arg):
-        return self.processes[arg]
-    
+        return Process(index=arg, parent=self)
+
     def __iter__(self):
-        return iter(self.processes)
-    
+        return map(self.__getitem__, range(len(self)))
 
-def pack_constraint(
-        constraint: Union[_Process, ProcessExpr, List[Tuple[int, float]]]
-        ) -> ArrayLike:
-    if isinstance(constraint, _Process):
-        processes = [(constraint._process_expr_elem.index, constraint._process_expr_elem.multiplier)]
-    elif isinstance(constraint, ProcessExpr):
-        processes = [(i.index, i.multiplier) for i in constraint.processes]
-    else:
-        processes = constraint
 
-    proc_max_index = max((i for (i, _) in processes)) + 1
+def pack_constraint(constraint: Union[Process, ProcessExpr]) -> ArrayLike:
+    constraint *= 1  # Converts Process to ProcessExpr
+    proc_max_index = max((process.index for process in constraint)) + 1
     array = np.zeros(proc_max_index)
-    for (i, v) in processes:
-        array[i] = v
+    for process in constraint:
+        array[process.index] = process.multiplier
     return array
 
 
@@ -181,14 +202,13 @@ class _Constraint:
     bound: float
 
     def __init__(
-            self,
-            name: str,
-            weighted_processes: Union[_Process, ProcessExpr, List[Tuple[int, float]]],
-            bound: float):
+        self, name: str, weighted_processes: Union[Process, ProcessExpr], bound: float
+    ):
         # TODO: investigate whether it would be nice to add a constraint by np.array
         self.name = name
         self.array = pack_constraint(weighted_processes)
         self.bound = bound
+        self.weighted_processes = weighted_processes
 
 
 class EqConstraint(_Constraint):
@@ -196,27 +216,29 @@ class EqConstraint(_Constraint):
     Equality constraint
     """
 
+    def __repr__(self) -> str:
+        return f"<EqConstraint: {self.name}\nEquation:{self.weighted_processes} == {self.bound}>"
+
+    def __format__(self, format_spec: str) -> str:
+        return f"{self.weighted_processes} == {self.bound}"
+
 
 class LeConstraint(_Constraint):
     """
     Less than or equal constraint
     """
 
+    def __repr__(self) -> str:
+        return f"<LeConstraint: {self.name}\nEquation:{self.weighted_processes} == {self.bound}>"
+
+    def __format__(self, format_spec: str) -> str:
+        return f"{self.weighted_processes} == {self.bound}"
+
 
 def GeConstraint(
-        name: str,
-        weighted_processes: Union[ProcessExpr, List[Tuple[int, float]]],
-        bound: float):
-    if isinstance(weighted_processes, ProcessExpr):
-        processes = [(i.index, i.multiplier) for i in weighted_processes.processes]
-    else:
-        processes = weighted_processes
-    return LeConstraint(name, [(i, -v) for (i, v) in processes], -bound)
-
-
-
-
-
+    name: str, weighted_processes: Union[Process, ProcessExpr], bound: float
+):
+    return LeConstraint(name, -weighted_processes, -bound)
 
 
 class IterationLimitReached(Exception):
@@ -226,12 +248,24 @@ class IterationLimitReached(Exception):
 
 
 class Overconstrained(Exception):
-    def __init__(self, constraints: Sequence[Tuple[_Constraint, float]]):
-        self.constraints = constraints
+    def __init__(
+        self,
+        proc_constraints: Sequence[Tuple[Process, float]],
+        eq_constraints: Sequence[Tuple[EqConstraint, float]],
+        le_constraints: Sequence[Tuple[LeConstraint, float]],
+    ):
+        self.proc_constraints = proc_constraints
+        self.eq_constraints = eq_constraints
+        self.le_constraints = le_constraints
+        # TODO Fix residual val being non-zero
         super().__init__(
-            "Overconstrained problem:\n" +
-            "\n".join([f"{c} => {val}"for (c, val) in constraints])
-            )
+            "Overconstrained problem:\nprocesses:\n"
+            + "\n".join([f"{c} => {val}" for (c, val) in proc_constraints])
+            + "\neq_constraints:\n"
+            + "\n".join([f"{c} => {val}" for (c, val) in eq_constraints])
+            + "\nle_constraints:\n"
+            + "\n".join([f"{c} => {val}" for (c, val) in le_constraints])
+        )
 
 
 class Underconstrained(Exception):
@@ -249,120 +283,190 @@ class NumericalDifficulties(Exception):
 class Measure:
     _resources: Resources
     _processes: Processes
-    _run_vector: ArrayLike      # cols: processes
-    _process_demands: ArrayLike # cols: processes, rows: resources (resources, processes)
+    _run_vector: ArrayLike  # cols: processes
+    _process_demands: ArrayLike  # cols: processes, rows: resources (resources, processes)
 
-    _resource_matrix: ArrayLike
-    _flow_matrix: ArrayLike     # (process, process, resource)
+    _resource_matrix: Optional[ArrayLike]
+    _flow_matrix: ArrayLike  # (process, process, resource)
     _cumulative_resource_matrix: ArrayLike
 
     def __init__(
-            self,
-            resources: Resources,
-            processes: Processes,
-            constraints: Sequence[Union[EqConstraint, LeConstraint]],
-            objective: Optional[ProcessExpr] = None,
-            maxiter: int = None):
+        self,
+        resources: Resources,
+        processes: Processes,
+        constraints: Sequence[Union[EqConstraint, LeConstraint]],
+        objective: Optional[ProcessExpr] = None,
+        maxiter: int = None,
+    ):
         self._resources = resources
         self._processes = processes
         self._run_vector = self._solve(
-                resources,
-                processes,
-                constraints,
-                objective,
-                maxiter)
-        _resource_matrix = None
-        _flow_matrix = np.empty((len(processes), len(processes), len(resources)))
-        _cumulative_resource_matrix = np.empty((len(processes), len(resources)))
+            resources, processes, constraints, objective, maxiter
+        )
+        self._resource_matrix = None
+        self._flow_matrix = np.empty((len(processes), len(processes), len(resources)))
+        self._cumulative_resource_matrix = np.empty((len(processes), len(resources)))
 
-    def _generate_resource_matrix(self):
-        self._resource_matrix = \
-            np.full((len(self._resources), len(self._processes)), self._run_vector) \
-            * self._process_demands
+    @overload
+    def run(self) -> Sequence[Tuple[Process, float]]:
+        ...
 
-    def measure_run(self, process: Union[_Process, int]) -> float:
-        return self._run_vector[int(process)]
+    @overload
+    def run(self, process: Process) -> float:
+        ...
 
-    # TODO: return some labelled measurement wrapper of the array slice
-    def measure_run_slice(self):
-        return self._run_vector
+    def run(
+        self, process: Optional[Process]
+    ) -> Union[Sequence[Tuple[Process, float]], Process]:
+        if process is None:
+            return zip(self._processes, self._run_vector)
+        else:
+            return self._run_vector[process.index]
 
-    # TODO: return units
-    def measure_resource(
-            self,
-            process: Union[_Process, int],
-            resource: Union[_Resource, int]) -> float:
+    @overload
+    def resource(self) -> Sequence[Tuple[Process, Resource, float]]:
+        ...
+
+    @overload
+    def resource(self, process: Process) -> Sequence[Tuple[Resource, float]]:
+        ...
+
+    @overload
+    def resource(self, resource: Resource) -> Sequence[Tuple[Process, float]]:
+        ...
+
+    @overload
+    def resource(self, process: Process, resource: Resource) -> float:
+        ...
+
+    def resource(
+        self, arg1: Optional[Union[Process, Resource]], arg2: Optional[Resource]
+    ) -> Union[
+        Sequence[Tuple[Process, Resource, float]],
+        Sequence[Tuple[Resource, float]],
+        Sequence[Tuple[Process, float]],
+        float,
+    ]:
         if self._resource_matrix is None:
-            self._generate_resource_matrix()
-        return self._resource_matrix[int(resource), int(process)]
-    
-    # TODO: return some labelled measurement wrapper of the array slice
-    def measure_resource_slice(
-            self,
-            process: Optional[Union[_Process, int]],
-            resource: Optional[Union[_Resource, int]]) -> ArrayLike:
-        if self._resource_matrix is None:
-            self._generate_resource_matrix()
+            self._resource_matrix = (
+                np.full((len(self._resources), len(self._processes)), self._run_vector)
+                * self._process_demands
+            )
+        if arg1 is None and arg2 is None:
+            raise NotImplementedError  # TODO: implement
+        elif isinstance(arg1, Process) and arg2 is None:
+            return zip(
+                self._processes, np.transpose(self._resource_matrix[arg1.index])
+            )  # TODO: make more efficient than a full transpose
+        elif isinstance(arg1, Resource) and arg2 is None:
+            return zip(self._processes, self._resource_matrix[arg1.index])
+        else:
+            return self._resource_matrix[arg2.index][arg1.index]
 
-        process_index = None if process is None else int(process)
-        resource_index = None if resource is None else int(resource)
+    @overload
+    def flow(self) -> Sequence[Tuple[Process, Process, Resource, float]]:
+        ...
 
-        return np.transpose(self._resource_matrix[resource_index:resource_index])[process_index:process_index]
-        
-    def measure_flow(
-            self,
-            process: Union[_Process, int],
-            process: Union[_Process, int],
-            resource: Union[_Resource, int]) -> float:
-        raise NotImplementedError
+    @overload
+    def flow(
+        self, from_process: Process, to_process: Process
+    ) -> Sequence[Tuple[Resource, float]]:
+        ...
 
-    # TODO: return some labelled measurement wrapper of the array slice
-    def measure_flow_slice(
-            self,
-            process: Optional[Union[_Process, int]],
-            process: Optional[Union[_Process, int]],
-            resource: Optional[Union[_Resource, int]]) -> ArrayLike:
-        raise NotImplementedError
-        
-    def measure_cumulative_resource(
-            self,
-            process: Union[_Process, int],
-            resource: Union[_Resource, int]) -> float:
-        raise NotImplementedError
+    @overload
+    def flow(self, resource: Resource) -> Sequence[Tuple[Process, Process, float]]:
+        ...
 
-    # TODO: return some labelled measurement wrapper of the array slice
-    def measure_cumulative_resource_slice(
-            self,
-            process: Optional[Union[_Process, int]],
-            resource: Optional[Union[_Resource, int]]) -> ArrayLike:
+    @overload
+    def flow(
+        self, from_process: Process, to_process: Process, resource: Resource
+    ) -> float:
+        ...
+
+    def flow(self, arg1, arg2):
+        raise NotImplementedError  # TODO: implement
+
+    @overload
+    def flow_from(self, process: Process) -> Sequence[Tuple[Resource, float]]:
+        ...
+
+    @overload
+    def flow_from(self, process: Process, resource: Resource) -> float:
+        ...
+
+    def flow_from(
+        self, process: Process, resource: Optional[Resource]
+    ) -> Union[Sequence[Tuple[Resource, float]], float]:
+        raise NotImplementedError  # TODO: implement
+
+    @overload
+    def flow_to(self, process: Process) -> Sequence[Tuple[Resource, float]]:
+        ...
+
+    @overload
+    def flow_to(self, process: Process, resource: Resource) -> float:
+        ...
+
+    def flow_to(
+        self, process: Process, resource: Optional[Resource]
+    ) -> Union[Sequence[Tuple[Resource, float]], float]:
+        raise NotImplementedError  # TODO: implement
+
+    @overload
+    def cumulative_resource(self) -> Sequence[Tuple[Process, Resource, float]]:
+        ...
+
+    @overload
+    def cumulative_resource(self, process: Process) -> Sequence[Tuple[Resource, float]]:
+        ...
+
+    @overload
+    def cumulative_resource(
+        self, resource: Resource
+    ) -> Sequence[Tuple[Process, float]]:
+        ...
+
+    @overload
+    def cumulative_resource(self, process: Process, resource: Resource) -> float:
+        ...
+
+    def cumulative_resource(
+        self, arg1: Optional[Union[Process, Resource]], arg2: Optional[Resource]
+    ) -> Union[
+        Sequence[Tuple[Process, Resource, float]],
+        Sequence[Tuple[Resource, float]],
+        Sequence[Tuple[Process, float]],
+        float,
+    ]:
         raise NotImplementedError
 
     def _solve(
-            self,
-            resources: Resources,
-            processes: Processes,
-            constraints: Sequence[Union[EqConstraint, LeConstraint]],
-            objective: Optional[ProcessExpr],
-            maxiter: int):
+        self,
+        resources: Resources,
+        processes: Processes,
+        constraints: Sequence[Union[EqConstraint, LeConstraint]],
+        objective: Optional[ProcessExpr],
+        maxiter: Optional[int],
+    ):
         """
         Given a system of processes, resources, and constraints, and an optional
         objective, attempt to solve the system.
 
-        If the system is under- or over-constrained, will report so
+        If the system is under- or over-constrained, will report so.
 
         Preconditions:
             *constraints* reference only processes in *processes*
             *processes* reference only resources in *resources*
         """
-
         # Add constraints for each process
         for process in processes:
-            process[1].resize(len(resources), refcheck=False)    # TODO: find correct type for this
+            process.array.resize(
+                len(resources), refcheck=False
+            )  # TODO: find correct type for this
         # Pad arrays out to the correct size:
         # The processes weren't necessarily aware of the total number of
         # resources at the time they were created
-        A_proc = np.transpose(np.array([process[1] for process in processes.processes]))
-        self._process_demands = A_proc
+        A_proc = np.transpose(np.array([process.array for process in processes]))
         b_proc = np.zeros(len(resources))
 
         # Add constraints for each specified constraint
@@ -374,7 +478,7 @@ class Measure:
         eq_constraints = []
         le_constraints = []
         for constraint in constraints:
-            constraint.array.resize(len(processes))    # TODO: find correct type for this
+            constraint.array.resize(len(processes))  # TODO: find correct type for this
             if isinstance(constraint, EqConstraint):
                 eq_constraints.append(constraint)
                 Al_eq.append(constraint.array)
@@ -384,7 +488,7 @@ class Measure:
                 Al_le.append(constraint.array)
                 bl_le.append(constraint.bound)
             else:
-                assert(False)
+                assert False
         A_eq = np.array(Al_eq)
         b_eq = np.array(bl_eq)
         A_le = np.array(Al_le)
@@ -398,8 +502,8 @@ class Measure:
                 # Determine whether the solution was under- or overconstrained
                 # https://towardsdatascience.com/how-do-you-use-numpy-scipy-and-sympy-to-solve-systems-of-linear-equations-9afed2c388af
                 augmented_A = Matrix(
-                    [A + [b] for A, b in zip(A_eq, b_eq)] +
-                    [A + [b] for A, b in zip(A_le, b_le)]
+                    [A + [b] for A, b in zip(A_eq, b_eq)]
+                    + [A + [b] for A, b in zip(A_le, b_le)]
                 )
                 rref = augmented_A.rref()
                 if len(rref[1]) < len(rref[0]):
@@ -408,7 +512,7 @@ class Measure:
                     # the matrix in RREF
                     raise Underconstrained()
                 else:
-                    raise Overconstrained([])
+                    raise Overconstrained([], [], [])
         else:
             # Build objective vector
             c = pack_constraint(objective)
@@ -422,12 +526,13 @@ class Measure:
                 options["maxiter"] = maxiter
 
             res = linprog(
-                    c,
-                    A_le if len(A_le) > 0 else None,
-                    b_le if len(b_le) > 0 else None,
-                    np.concatenate((A_proc, A_eq)),
-                    np.concatenate((b_proc, b_eq)),
-                    options=options)
+                c,
+                A_le if len(A_le) > 0 else None,
+                b_le if len(b_le) > 0 else None,
+                np.concatenate((A_proc, A_eq)),
+                np.concatenate((b_proc, b_eq)),
+                options=options,
+            )
 
             if res.status == 0:
                 # Optimization terminated successfully
@@ -437,11 +542,21 @@ class Measure:
                 raise IterationLimitReached(res.nit)
             elif res.status == 2:
                 # Problem appears to be infeasible
+                print(res.con)
+
                 raise Overconstrained(
-                        [(eq_constraints[i], v) for i, v in enumerate(res.con)
-                            if v != 0] +
-                        [(le_constraints[i], v) for i, v in enumerate(res.slack)
-                            if v < 0])  # TODO: sort out typing warning
+                    [
+                        (processes[i], v)
+                        for i, v in enumerate(res.con[: len(processes)])
+                        if v != 0
+                    ],
+                    [
+                        (eq_constraints[i], v)
+                        for i, v in enumerate(res.con[len(processes) :])
+                        if v != 0
+                    ],
+                    [(le_constraints[i], v) for i, v in enumerate(res.slack) if v < 0],
+                )  # TODO: sort out typing warning
             elif res.status == 3:
                 # Problem appears to be unbounded
                 raise UnboundedSolution
@@ -449,39 +564,4 @@ class Measure:
                 # Numerical difficulties encountered
                 raise NumericalDifficulties
             else:
-                assert(False)
-
-
-def calculate_actual_resource(
-    process_demands: ArrayLike,     # (process, resource) -> float
-    run_vector: ArrayLike           # process -> +ve float
-    ) -> ArrayLike:  # actual_resource: (process, resource) -> +ve float
-    """
-    Given the resource demands of each process, and the number of times
-    that each process runs, calculate the number of resources that
-    are required by each process.
-    """
-    actual_resource = np.zeros_like(process_demands)
-    for i, runs in enumerate(run_vector):
-        actual_resource[i] = process_demands[i]*runs
-    return actual_resource
-
-"""
-Needs a rethink
-def calculate_actual_resource_flow(
-    actual_resource: ArrayLike,     # (process, resource) -> +ve float
-    demand_policy: ArrayLike        # (process, process, resource) -> +ve float
-    ) -> ArrayLike:  # actual_resource_flow: (process, process, resource) -> +ve float
-    ""
-    Given the number of resources that are required by each process, and the policy
-    that defines how processes connect, calculate the number of resources that
-    flow through each edge.
-    ""
-    actual_resource_flow = np.zeros_like(demand_policy)
-    for i, in_process in enumerate(demand_policy):
-        for j, out_process in enumerate(in_process):
-            for k, proportion in enumerate(out_process):
-                actual_resource_flow[i][j][k] = proportion*actual_resource[j][k]
-
-    return actual_resource_flow
-"""
+                assert False

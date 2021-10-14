@@ -1,0 +1,26 @@
+Implement load and dump methods for:
+    Resources
+    Processes
+    data_utils.load_processes
+    Constraints
+
+Add CSV loader wrapper for the load and dump methods
+
+Add native uncertainty to processes (decompose to lower and upper bound)
+
+Redo constraint type helpers:
+    Ratio to allow a ratio between arbitrarily many underlying processes
+        Will require a bit of a refactor of the constraints interface
+    Equal and less than for individual processes/resources
+    Resource flow
+
+Genericise use of List (to Sequence, MutableSequence, or other Container ABC as required)
+
+Fix returned equation if problem too constrained
+
+Test constrained solution solver
+
+Report better errors for constrained solution solver
+
+Fix bugs:
+    unconstrained valueerror (ask Mark how to replicate)
