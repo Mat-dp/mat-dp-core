@@ -3,8 +3,8 @@ from mat_dp_core.maths_core import (
     Processes,
     calculate_actual_resource,
     generate_process_demands,
-    _Process,
-    _Resource
+    Process,
+    Resource
 )
 from numpy.typing import ArrayLike
 from typing import Union, Optional
@@ -111,82 +111,79 @@ class MeasureManager:
         processes: Processes,
         run_vector: ArrayLike,
     ) -> None:
-        process_demands = generate_process_demands(resources, processes)
-        actual_resource = calculate_actual_resource(process_demands, run_vector)
-        self.actual_res_measure = ActualResourceMeasure(
-            resources,
-            processes,
-            run_vector,
-            process_demands,
-            actual_resource
-        )
-        self.cumulative_res_measure = CumulativeResourceMeasure(
-            resources,
-            processes,
-            run_vector,
-            process_demands,
-            actual_resource
-        )
-        self.flow_measure = FlowMeasure(
-            resources,
-            processes,
-            run_vector,
-            process_demands,
-            actual_resource
-        )
-
+        self.process_demands = None
+        self.actual_resource = None
 
     def make_actual_resource_measure(
         self,
-        process: Optional[Union[_Process, int]] = None,
-        resource: Optional[Union[_Resource, int]] = None
-    ):
-        if isinstance(process, _Process):
+        process: Optional[Union[Process, int]] = None,
+        resource: Optional[Union[Resource, int]] = None
+    ) -> Union:
+        if self.process_demands is None:
+            self.process_demands = generate_process_demands(resources, processes)
+        if self.actual_resource is None:
+            self.actual_resource = calculate_actual_resource(process_demands, run_vector)
+        if isinstance(process, Process):
             process_index = process.index
         else:
             process_index = process
         
-        if isinstance(resource, _Resource):
+        if isinstance(resource, Resource):
             resource_index = resource.index
         else:
             resource_index = resource
         
-        return self.actual_res_measure(process_index, resource_index)
+        if process_index is None and resource_index is None:
+            return self.actual_resource
+        elif process_index is None:
+            return self.actual_resource[:, resource_index]
+        elif resource_index is None:
+            return self.actual_resource[process_index]
+        else:
+            return self.actual_resource[process_index][resource_index]
+
+    def make_actual_resource_measure_single(
+        self,
+        process: Union[Process, int],
+        resource: Union[Resource, int]
+    ):
+        self.make_actual_resource_measure(process, resource)
+        #Unpack
 
     def make_cumulative_resource_measure(
         self,
-        process: Optional[Union[_Process, int]] = None,
-        resource: Optional[Union[_Resource, int]] = None
+        process: Optional[Union[Process, int]] = None,
+        resource: Optional[Union[Resource, int]] = None
     ):
-        if isinstance(process, _Process):
+        if isinstance(process, Process):
             process_index = process.index
         else:
             process_index = process
         
-        if isinstance(resource, _Resource):
+        if isinstance(resource, Resource):
             resource_index = resource.index
         else:
             resource_index = resource
 
-        return self.cumulative_res_measure(process_index, resource_index)
+        raise NotImplementedError('CumulativeResourceMeasure not implemented')
     
     def make_flow_measure(
         self,
-        in_process: Optional[Union[_Process, int]] = None,
-        out_process: Optional[Union[_Process, int]] = None,
-        resource: Optional[Union[_Resource, int]] = None
+        in_process: Optional[Union[Process, int]] = None,
+        out_process: Optional[Union[Process, int]] = None,
+        resource: Optional[Union[Resource, int]] = None
     ):
-        if isinstance(in_process, _Process):
+        if isinstance(in_process, Process):
             in_process_index = in_process.index
         else:
             in_process_index = in_process
         
-        if isinstance(out_process, _Process):
+        if isinstance(out_process, Process):
             out_process_index = out_process.index
         else:
             out_process_index = out_process
         
-        if isinstance(resource, _Resource):
+        if isinstance(resource, Resource):
             resource_index = resource.index
         else:
             resource_index = resource
