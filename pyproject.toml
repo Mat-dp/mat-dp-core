@@ -12,6 +12,16 @@ scipy = "^1.7.1"
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
 black = "^21.9b0"
+isort = "^5.9.3"
+pre-commit = "^2.15.0"
+autoflake = "^1.4"
+
+[tool.black]
+line-length = 79
+
+[tool.isort]
+profile = "black"
+line_length = 79
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

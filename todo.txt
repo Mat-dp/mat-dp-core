@@ -24,3 +24,5 @@ Report better errors for constrained solution solver
 
 Fix bugs:
     unconstrained valueerror (ask Mark how to replicate)
+
+Add mypy to pre-commit

@@ -1,12 +1,11 @@
-from dataclasses import dataclass
 from itertools import starmap
+from typing import MutableSequence, Optional, Sequence, Tuple, Union, overload
+
 import numpy as np
 from numpy.typing import ArrayLike
 from scipy import linalg
 from scipy.optimize import linprog
 from sympy import Matrix
-from typing import MutableSequence, Optional, overload, Sequence, Tuple, Union
-
 
 ResourceName = str
 Unit = str

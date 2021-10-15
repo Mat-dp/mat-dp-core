@@ -1,15 +1,15 @@
+import csv
+from typing import List, Optional, Sequence
+
 from mat_dp_core import (
-    Scenario,
     FlowMeasure,
     Policy,
-    Resource,
     Process,
+    Resource,
+    Scenario,
     ScenarioFlow,
 )
-from mat_dp_core.utils import generate_resource_index, generate_process_index
-from typing import List, Sequence, Optional
-
-import csv
+from mat_dp_core.utils import generate_process_index, generate_resource_index
 
 
 def load_processes(data: Sequence[Sequence[float]]):

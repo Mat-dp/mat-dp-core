@@ -1,10 +1,10 @@
 from mat_dp_core.maths_core import (
-    Resources,
-    Processes,
     EqConstraint,
-    LeConstraint,
     GeConstraint,
+    LeConstraint,
     Measure,
+    Processes,
+    Resources,
 )
 
 resources = Resources()

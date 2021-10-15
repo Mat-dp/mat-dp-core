@@ -1,11 +1,12 @@
+from typing import Optional
+
 from mat_dp_core.maths_core import (
     EqConstraint,
     Process,
+    Processes,
     Resource,
     Resources,
-    Processes,
 )
-from typing import Union, List, Tuple, Optional
 
 
 class RunEqConstraint(EqConstraint):
@@ -22,7 +23,7 @@ class RunEqConstraint(EqConstraint):
             process_index = process
         if name is None:
             name = f"{processes[process_index].name}_fixed_at_{runs}_runs"
-        weighted_processes = [(process_index, float(1))]
+        [(process_index, float(1))]
         super().__init__(name, process, runs)
 
 
