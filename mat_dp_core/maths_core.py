@@ -1,5 +1,13 @@
 from itertools import starmap
-from typing import MutableSequence, Optional, Sequence, Tuple, Union, overload
+from typing import (
+    List,
+    MutableSequence,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    overload,
+)
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -70,9 +78,9 @@ class Resources:
 
 
 class ProcessExpr:
-    _processes: Sequence["Process"]
+    _processes: List["Process"]
 
-    def __init__(self, _processes: Sequence["Process"]):
+    def __init__(self, _processes: List["Process"]):
         self._processes = _processes
 
     def __add__(self, other: Union["ProcessExpr", "Process"]) -> "ProcessExpr":
@@ -328,10 +336,10 @@ class Measure:
         ...
 
     def run(
-        self, process: Optional[Process]
-    ) -> Union[Sequence[Tuple[Process, float]], Process]:
+        self, process: Optional[Process] = None
+    ) -> Union[Sequence[Tuple[Process, float]], float]:
         if process is None:
-            return zip(self._processes, self._run_vector)
+            return list(zip(self._processes, self._run_vector))
         else:
             return self._run_vector[process.index]
 
@@ -340,21 +348,21 @@ class Measure:
         ...
 
     @overload
-    def resource(self, process: Process) -> Sequence[Tuple[Resource, float]]:
+    def resource(self, arg1: Process) -> Sequence[Tuple[Resource, float]]:
         ...
 
     @overload
-    def resource(self, resource: Resource) -> Sequence[Tuple[Process, float]]:
+    def resource(self, arg1: Resource) -> Sequence[Tuple[Process, float]]:
         ...
 
     @overload
-    def resource(self, process: Process, resource: Resource) -> float:
+    def resource(self, arg1: Process, arg2: Resource) -> float:
         ...
 
     def resource(
         self,
-        arg1: Optional[Union[Process, Resource]],
-        arg2: Optional[Resource],
+        arg1: Optional[Union[Process, Resource]] = None,
+        arg2: Optional[Resource] = None,
     ) -> Union[
         Sequence[Tuple[Process, Resource, float]],
         Sequence[Tuple[Resource, float]],
@@ -372,14 +380,20 @@ class Measure:
         if arg1 is None and arg2 is None:
             raise NotImplementedError  # TODO: implement
         elif isinstance(arg1, Process) and arg2 is None:
-            return zip(
-                self._processes,
-                np.transpose(self._resource_matrix[arg1.index]),
+            return list(
+                zip(
+                    self._processes,
+                    np.transpose(self._resource_matrix[arg1.index]),
+                )
             )  # TODO: make more efficient than a full transpose
         elif isinstance(arg1, Resource) and arg2 is None:
-            return zip(self._processes, self._resource_matrix[arg1.index])
-        else:
+            return list(
+                zip(self._processes, self._resource_matrix[arg1.index])
+            )
+        elif arg1 is not None and arg2 is not None:
             return self._resource_matrix[arg2.index][arg1.index]
+        else:
+            raise NotImplementedError  # TODO: implement
 
     @overload
     def flow(self) -> Sequence[Tuple[Process, Process, Resource, float]]:
@@ -387,23 +401,29 @@ class Measure:
 
     @overload
     def flow(
-        self, from_process: Process, to_process: Process
+        self, arg1: Process, arg2: Process
     ) -> Sequence[Tuple[Resource, float]]:
         ...
 
     @overload
-    def flow(
-        self, resource: Resource
-    ) -> Sequence[Tuple[Process, Process, float]]:
+    def flow(self, arg1: Resource) -> Sequence[Tuple[Process, Process, float]]:
         ...
 
     @overload
-    def flow(
-        self, from_process: Process, to_process: Process, resource: Resource
-    ) -> float:
+    def flow(self, arg1: Process, arg2: Process, arg3: Resource) -> float:
         ...
 
-    def flow(self, arg1, arg2):
+    def flow(
+        self,
+        arg1: Optional[Union[Process, Resource]] = None,
+        arg2: Optional[Process] = None,
+        arg3: Optional[Resource] = None,
+    ) -> Union[
+        Sequence[Tuple[Process, Process, Resource, float]],
+        Sequence[Tuple[Resource, float]],
+        Sequence[Tuple[Process, Process, float]],
+        float,
+    ]:
         raise NotImplementedError  # TODO: implement
 
     @overload
@@ -415,7 +435,7 @@ class Measure:
         ...
 
     def flow_from(
-        self, process: Process, resource: Optional[Resource]
+        self, process: Process, resource: Optional[Resource] = None
     ) -> Union[Sequence[Tuple[Resource, float]], float]:
         raise NotImplementedError  # TODO: implement
 
@@ -428,7 +448,7 @@ class Measure:
         ...
 
     def flow_to(
-        self, process: Process, resource: Optional[Resource]
+        self, process: Process, resource: Optional[Resource] = None
     ) -> Union[Sequence[Tuple[Resource, float]], float]:
         raise NotImplementedError  # TODO: implement
 
@@ -438,33 +458,31 @@ class Measure:
 
     @overload
     def cumulative_resource(
-        self, process: Process
+        self, arg1: Process
     ) -> Sequence[Tuple[Resource, float]]:
         ...
 
     @overload
     def cumulative_resource(
-        self, resource: Resource
+        self, arg1: Resource
     ) -> Sequence[Tuple[Process, float]]:
         ...
 
     @overload
-    def cumulative_resource(
-        self, process: Process, resource: Resource
-    ) -> float:
+    def cumulative_resource(self, arg1: Process, arg2: Resource) -> float:
         ...
 
     def cumulative_resource(
         self,
-        arg1: Optional[Union[Process, Resource]],
-        arg2: Optional[Resource],
+        arg1: Optional[Union[Process, Resource]] = None,
+        arg2: Optional[Resource] = None,
     ) -> Union[
         Sequence[Tuple[Process, Resource, float]],
         Sequence[Tuple[Resource, float]],
         Sequence[Tuple[Process, float]],
         float,
     ]:
-        raise NotImplementedError
+        raise NotImplementedError  # TODO: implement
 
     def _solve(
         self,
