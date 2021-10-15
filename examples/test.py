@@ -52,6 +52,7 @@ objective = (
     + energy_grid
 )
 
-solution = Measure(resources, processes, constraints, objective)
-print(solution)
-print(solution._run_vector)
+measurement = Measure(resources, processes, constraints, objective)
+
+print(measurement._run_vector)
+print(measurement.resource(pizza_box))

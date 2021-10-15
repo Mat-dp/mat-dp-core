@@ -316,6 +316,7 @@ class Measure:
     ):
         self._resources = resources
         self._processes = processes
+        print(processes._processes)
         self._run_vector = self._solve(
             resources, processes, constraints, objective, maxiter
         )
@@ -326,6 +327,7 @@ class Measure:
         self._cumulative_resource_matrix = np.empty(
             (len(processes), len(resources))
         )
+        self._process_demands = None
 
     @overload
     def run(self) -> Sequence[Tuple[Process, float]]:
@@ -369,6 +371,8 @@ class Measure:
         Sequence[Tuple[Process, float]],
         float,
     ]:
+        if self._process_demands is None:
+            self._process_demands = np.transpose(np.array([process.array for process in self._processes]))
         if self._resource_matrix is None:
             self._resource_matrix = (
                 np.full(
@@ -382,10 +386,10 @@ class Measure:
         elif isinstance(arg1, Process) and arg2 is None:
             return list(
                 zip(
-                    self._processes,
-                    np.transpose(self._resource_matrix[arg1.index]),
+                    self._resources,
+                    self._resource_matrix[:, arg1.index],
                 )
-            )  # TODO: make more efficient than a full transpose
+            )
         elif isinstance(arg1, Resource) and arg2 is None:
             return list(
                 zip(self._processes, self._resource_matrix[arg1.index])

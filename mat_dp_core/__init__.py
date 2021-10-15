@@ -98,5 +98,5 @@ class ResourceConstraint(EqConstraint):
             phrase = "production"
 
         if name is None:
-            name = f"resource_{phrase}_{resource_name}_fixed_at_{resource_bound}{units}for_process{process_name}"
+            name = f"resource_{phrase}_{resource_name}_fixed_at_{resource_bound}{units}_for_process_{process_name}"
         super().__init__(name, process, no_runs)
