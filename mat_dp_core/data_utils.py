@@ -1,4 +1,11 @@
-from mat_dp_core import Scenario, FlowMeasure, Policy, Resource, Process, ScenarioFlow
+from mat_dp_core import (
+    Scenario,
+    FlowMeasure,
+    Policy,
+    Resource,
+    Process,
+    ScenarioFlow,
+)
 from mat_dp_core.utils import generate_resource_index, generate_process_index
 from typing import List, Sequence, Optional
 
@@ -49,11 +56,16 @@ def scenarios_to_csv_by_process(
     csv_file_loc: str = "../../E_matbytech_bycountry.csv",
 ):
     if not all(
-        [i.policy.processes == scenarios[0].policy.processes for i in scenarios]
+        [
+            i.policy.processes == scenarios[0].policy.processes
+            for i in scenarios
+        ]
     ):
         raise ValueError("Process sequence mismatch between scenarios")
     proc_headings = [process.name for process in scenarios[0].policy.processes]
-    all_headings = ["", policy_heading] + scenario_heading_sections + proc_headings
+    all_headings = (
+        ["", policy_heading] + scenario_heading_sections + proc_headings
+    )
     with open(csv_file_loc, mode="w") as new_file:
         file_writer = csv.writer(
             new_file, delimiter=",", quotechar='"', quoting=csv.QUOTE_MINIMAL
@@ -67,7 +79,9 @@ def scenarios_to_csv_by_process(
             out_flows = []
             for process in processes:
                 try:
-                    flow_measure = FlowMeasure(relevant_resource, in_process=process)
+                    flow_measure = FlowMeasure(
+                        relevant_resource, in_process=process
+                    )
                     out_flow = scenario.measure_flow(flow_measure).resource
                 except ValueError:
                     out_flow = 0

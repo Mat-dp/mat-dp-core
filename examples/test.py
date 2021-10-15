@@ -19,7 +19,10 @@ recycled_cardboard_producer = processes.create(
     "recycled cardboard producer", (recycled_cardboard, +1)
 )
 pizza_box_producer = processes.create(
-    "pizza box producer", (recycled_cardboard, -0.5), (cardboard, -2), (pizza_box, 1)
+    "pizza box producer",
+    (recycled_cardboard, -0.5),
+    (cardboard, -2),
+    (pizza_box, 1),
 )
 recycled_pizza_box_producer = processes.create(
     "recycled pizza box producer",
@@ -32,7 +35,9 @@ energy_grid = processes.create("energy grid", (energy, -2))
 
 constraints = [
     EqConstraint(
-        "recycled pizza box ratio", pizza_box_producer - recycled_pizza_box_producer, 0
+        "recycled pizza box ratio",
+        pizza_box_producer - recycled_pizza_box_producer,
+        0,
     ),
     EqConstraint("required energy", energy_grid, 8),
 ]

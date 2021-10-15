@@ -101,7 +101,9 @@ class ProcessExpr:
         return self + -other
 
     def __repr__(self) -> str:
-        return "<ProcessExpr {}>".format(" + ".join(map(format, self._processes)))
+        return "<ProcessExpr {}>".format(
+            " + ".join(map(format, self._processes))
+        )
 
     def __format__(self, format_spec: str) -> str:
         return "{}".format(" + ".join(map(format, self._processes)))
@@ -166,8 +168,12 @@ class Processes:
     # Maps process names to resource demands
     _processes: MutableSequence[Tuple[ProcessName, ArrayLike]] = []
 
-    def create(self, name: ProcessName, *resources: Tuple[Resource, float]) -> Process:
-        res_max_index = max((resource.index for (resource, _) in resources)) + 1
+    def create(
+        self, name: ProcessName, *resources: Tuple[Resource, float]
+    ) -> Process:
+        res_max_index = (
+            max((resource.index for (resource, _) in resources)) + 1
+        )
         array = np.zeros(res_max_index)
         for (resource, v) in resources:
             i = resource.index
@@ -202,7 +208,10 @@ class _Constraint:
     bound: float
 
     def __init__(
-        self, name: str, weighted_processes: Union[Process, ProcessExpr], bound: float
+        self,
+        name: str,
+        weighted_processes: Union[Process, ProcessExpr],
+        bound: float,
     ):
         # TODO: investigate whether it would be nice to add a constraint by np.array
         self.name = name
@@ -304,8 +313,12 @@ class Measure:
             resources, processes, constraints, objective, maxiter
         )
         self._resource_matrix = None
-        self._flow_matrix = np.empty((len(processes), len(processes), len(resources)))
-        self._cumulative_resource_matrix = np.empty((len(processes), len(resources)))
+        self._flow_matrix = np.empty(
+            (len(processes), len(processes), len(resources))
+        )
+        self._cumulative_resource_matrix = np.empty(
+            (len(processes), len(resources))
+        )
 
     @overload
     def run(self) -> Sequence[Tuple[Process, float]]:
@@ -340,7 +353,9 @@ class Measure:
         ...
 
     def resource(
-        self, arg1: Optional[Union[Process, Resource]], arg2: Optional[Resource]
+        self,
+        arg1: Optional[Union[Process, Resource]],
+        arg2: Optional[Resource],
     ) -> Union[
         Sequence[Tuple[Process, Resource, float]],
         Sequence[Tuple[Resource, float]],
@@ -349,14 +364,18 @@ class Measure:
     ]:
         if self._resource_matrix is None:
             self._resource_matrix = (
-                np.full((len(self._resources), len(self._processes)), self._run_vector)
+                np.full(
+                    (len(self._resources), len(self._processes)),
+                    self._run_vector,
+                )
                 * self._process_demands
             )
         if arg1 is None and arg2 is None:
             raise NotImplementedError  # TODO: implement
         elif isinstance(arg1, Process) and arg2 is None:
             return zip(
-                self._processes, np.transpose(self._resource_matrix[arg1.index])
+                self._processes,
+                np.transpose(self._resource_matrix[arg1.index]),
             )  # TODO: make more efficient than a full transpose
         elif isinstance(arg1, Resource) and arg2 is None:
             return zip(self._processes, self._resource_matrix[arg1.index])
@@ -374,7 +393,9 @@ class Measure:
         ...
 
     @overload
-    def flow(self, resource: Resource) -> Sequence[Tuple[Process, Process, float]]:
+    def flow(
+        self, resource: Resource
+    ) -> Sequence[Tuple[Process, Process, float]]:
         ...
 
     @overload
@@ -417,7 +438,9 @@ class Measure:
         ...
 
     @overload
-    def cumulative_resource(self, process: Process) -> Sequence[Tuple[Resource, float]]:
+    def cumulative_resource(
+        self, process: Process
+    ) -> Sequence[Tuple[Resource, float]]:
         ...
 
     @overload
@@ -427,11 +450,15 @@ class Measure:
         ...
 
     @overload
-    def cumulative_resource(self, process: Process, resource: Resource) -> float:
+    def cumulative_resource(
+        self, process: Process, resource: Resource
+    ) -> float:
         ...
 
     def cumulative_resource(
-        self, arg1: Optional[Union[Process, Resource]], arg2: Optional[Resource]
+        self,
+        arg1: Optional[Union[Process, Resource]],
+        arg2: Optional[Resource],
     ) -> Union[
         Sequence[Tuple[Process, Resource, float]],
         Sequence[Tuple[Resource, float]],
@@ -466,7 +493,9 @@ class Measure:
         # Pad arrays out to the correct size:
         # The processes weren't necessarily aware of the total number of
         # resources at the time they were created
-        A_proc = np.transpose(np.array([process.array for process in processes]))
+        A_proc = np.transpose(
+            np.array([process.array for process in processes])
+        )
         b_proc = np.zeros(len(resources))
 
         # Add constraints for each specified constraint
@@ -478,7 +507,9 @@ class Measure:
         eq_constraints = []
         le_constraints = []
         for constraint in constraints:
-            constraint.array.resize(len(processes))  # TODO: find correct type for this
+            constraint.array.resize(
+                len(processes)
+            )  # TODO: find correct type for this
             if isinstance(constraint, EqConstraint):
                 eq_constraints.append(constraint)
                 Al_eq.append(constraint.array)
@@ -555,7 +586,11 @@ class Measure:
                         for i, v in enumerate(res.con[len(processes) :])
                         if v != 0
                     ],
-                    [(le_constraints[i], v) for i, v in enumerate(res.slack) if v < 0],
+                    [
+                        (le_constraints[i], v)
+                        for i, v in enumerate(res.slack)
+                        if v < 0
+                    ],
                 )  # TODO: sort out typing warning
             elif res.status == 3:
                 # Problem appears to be unbounded

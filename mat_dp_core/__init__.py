@@ -1,4 +1,10 @@
-from mat_dp_core.maths_core import EqConstraint, Process, Resource, Resources, Processes
+from mat_dp_core.maths_core import (
+    EqConstraint,
+    Process,
+    Resource,
+    Resources,
+    Processes,
+)
 from typing import Union, List, Tuple, Optional
 
 
