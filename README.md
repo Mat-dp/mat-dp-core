@@ -1,8 +1,7 @@
-# MaDe Core
-## *(Ma)terial (De)mand software for analysing emissions reduction potential*
+# MAT-dp Core
+## *MATerial Demand Projections Model*
 
-
-Welcome to the MaDe core. This repo represents the core of the MaDe project, which aims to deliver user-friendly and open-access software to study the environmental implications of materials used for building low-carbon systems. 
+Welcome to the MAT-dp core. This repo represents the core of the MAT-dp project, which aims to deliver user-friendly and open-access software to study the environmental implications of materials used for building low-carbon systems. 
 
 # Concepts
 
@@ -23,7 +22,7 @@ Scenario - A specified lower bound on the resource flow or number of process run
 
 ## Introduction
 
-The below describes a practical example of using MaDe. Imagine...
+The below describes a practical example of using MAT-dp. Imagine...
 
 * Pizza boxes are made from cardboard and recycled cardboard. *(process/resource)*
 * There are different processes for making them, which have different ratios of `cardboard:recycled_cardboard` . *(process)*
