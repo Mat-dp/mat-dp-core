@@ -3,6 +3,22 @@
 
 Welcome to the MAT-dp core. This repo represents the core of the MAT-dp project, which aims to deliver user-friendly and open-access software to study the environmental implications of materials used for building low-carbon systems. 
 
+# Installation and launch
+
+Please install poetry - see [here](https://github.com/python-poetry/poetry)
+
+To install all the project dependencies
+
+`poetry install`
+
+Then go the examples folder
+
+`cd examples`
+
+Then run the pizza box example
+
+`poetry run python3 test.py`
+
 # Concepts
 
 ## Definitions
@@ -13,10 +29,17 @@ Resource - A resource to be produced or consumed, such as steel or aluminium.
 
 Process - A process which produces and/or consumes resources.
 
-Policy - A graph that describes how processes are linked.
+Constraint - A condition the system is placed under.
 
-Scenario - A specified lower bound on the resource flow or number of process runs.
+* Run Ratio Constraint - A constraint that fixes the ratio of runs between two processes - e.g. wind and solar will run at a ratio of 1:2.
 
+* Resource Constraint - A constraint on the amount of resource produced, e.g. we must produce at least 10 energy.
+
+* Run Eq Constraint - A constraint that specifies the number of runs a process must make.
+
+Objective - The objective function is the property of the system which will be minimised. This could be something like the number of runs of the system, or the total cost.
+
+Measurement - a measurement taken of the solved system, determining the 
 
 # Usage - High Level
 
@@ -26,183 +49,93 @@ The below describes a practical example of using MAT-dp. Imagine...
 
 * Pizza boxes are made from cardboard and recycled cardboard. *(process/resource)*
 * There are different processes for making them, which have different ratios of `cardboard:recycled_cardboard` . *(process)*
-* We wish to priorites the process that uses the most recycled cardboard, but not so as to eliminate the less efficient version. *(policy)*
+* We wish to priorites the process that uses the most recycled cardboard, but not so as to eliminate the less efficient version. *(ratio constraint)*
 * We then, rather inefficiently, burn them to produce energy. *(process)*
-* We must produce at least 8 kWh of energy to survive the frosty winters. *(scenario)*
+* We must produce at least 8 kWh of energy to survive the frosty winters. *(resource constraint)*
+* We wish to only generate the minimum amount of cardboard and pizza boxes. *(objective)*
 * How many pizza boxes must we burn to survive? *(measurement)*
 ## Step 1: Define resources
 
-Firstly you must define all the resources you wish to use, with their name and units.
+Firstly we must define all the resources we wish to use, with their name and units.
 
 ```py
-from mat_dp_core import Resource
+from mat_dp_core import Resources
 
-resources = [
-    Resource('cardboard', unit = 'm2'),
-    Resource('recycled_cardboard', unit = 'm2'),
-    Resource('pizza_box'),
-    Resource('energy', unit = 'kWh')
-]
+resources = Resources()
+cardboard = resources.create("cardboard", unit="m2")
+recycled_cardboard = resources.create("recycled_cardboard", unit="m2")
+pizza_box = resources.create("pizza_box")
+energy = resources.create("energy", unit="kWh")
 ```
-
-## Step 1a: Put resources in accessible format
-
-You'll want to access these resources a lot, so you may find it helpful to have them structured by name rather than in a list. We have provided a helper function for this:
-
-```py
-from mat_dp_core.utils import generate_resource_index
-resource_index = generate_resource_index(resources)
-```
-
 
 ## Step 2: Define processes
 
-You must must take these resources and use them to define your processes. These are defined by a name and the resources that they produce and consume.
+We must now take these resources and use them to define our processes. These are defined by a name and the resources that they produce and consume.
 
 ```py
-from mat_dp_core import Process
-processes = [
-    Process(
-        'generate_cardboard',
-        {
-            resource_index['cardboard']: -1.0,
-            resource_index['recycled_cardboard']: -2.0
-        }
-    ),
-    Process(
-        'make_pizza_box_normal',
-        {
-            resource_index['cardboard']: 2.0,
-            resource_index['recycled_cardboard']: 0.5,
-            resource_index['pizza_box']: -1
-        }
-    ),
-    Process(
-        'make_pizza_box_recycled',
-        {
-            resource_index['recycled_cardboard']: 3,
-            resource_index['cardboard']: 1,
-            resource_index['pizza_box']: -1
-        }
-    ),
-    Process(
-        'burn_pizza_box',
-        {
-            resource_index['pizza_box']: 1,
-            resource_index['energy']: -4
-        }
-    ),
-    Process(
-        'energy_sink',
-        {
-            resource_index['energy']: 2
-        }
-    )
-]
-```
-
-## Step 2a: Put processes in accessible format
-
-Similarly to resources, you may want to use a helper function to put the processes in a more useable format:
-
-```py
-from mat_dp_core.utils import generate_process_index
-process_index = generate_process_index(processes)
-```
-
-## Step 3: Define policy_elements
-
-Now we need to define the policy graph, the linkages between the section of the graph. Each element of the policy graph is defined by:
-
-* The resource it is relevent to
-* The process node it is relevant to
-* The incident processes upon that the proportion of the total is demanded from each incident process
-
-
-```py
-from mat_dp_core import Policy, PolicyElement
-
-policy = Policy(
-    [
-        PolicyElement(
-            resource_index['cardboard'],
-            processes_index['make_pizza_box_normal'],
-            {
-                processes_index['generate_cardboard']: 1
-            }
-        ),
-        PolicyElement(
-            resource_index['cardboard'],
-            processes_index['make_pizza_box_recycled'],
-            {
-                processes_index['generate_cardboard']: 1
-            }
-        ),
-        PolicyElement(
-            resource_index['recycled_cardboard'],
-            processes_index['make_pizza_box_recycled'],
-            {
-                processes_index['generate_cardboard']: 1
-            }
-        ),
-        PolicyElement(
-            resource_index['recycled_cardboard'],
-            processes_index['make_pizza_box_normal'],
-            {
-                processes_index['generate_cardboard']: 1
-            }
-        ),
-        PolicyElement(
-            resource_index['pizza_box'],
-            processes_index['burn_pizza_box'],
-            {
-                processes_index['make_pizza_box_normal']: 0.4,
-                processes_index['make_pizza_box_recycled']: 0.6
-            }
-        ),
-        PolicyElement(
-            resource_index['energy'],
-            processes_index['energy_sink'],
-            {
-                processes_index['burn_pizza_box']: 1,
-
-            }
-        )
-    ]
+from mat_dp_core import Processes
+processes = Processes()
+cardboard_producer = processes.create("cardboard producer", (cardboard, +1))
+recycled_cardboard_producer = processes.create(
+    "recycled cardboard producer", (recycled_cardboard, +1)
 )
+pizza_box_producer = processes.create(
+    "pizza box producer",
+    (recycled_cardboard, -0.5),
+    (cardboard, -2),
+    (pizza_box, 1),
+)
+recycled_pizza_box_producer = processes.create(
+    "recycled pizza box producer",
+    (recycled_cardboard, -3),
+    (cardboard, -1),
+    (pizza_box, 1),
+)
+power_plant = processes.create("power plant", (pizza_box, -1), (energy, 4))
+energy_grid = processes.create("energy grid", (energy, -2))
 ```
 
-## Step 4: Generate a scenario
 
-Once you've estiblished how all the processes are linked, we must now add our scenario. The below specifies we get at least 8 kWh of energy out:
+
+## Step 3: Define constraints
+
+Now we need to define the constraints of the problem. We want to specify we take equal amounts of pizza boxes from each producer *(Run ratio constraint)*, and that we only require 8 kWh of energy *(Resource constraint)*:
 
 ```py
-from mat_dp_core import Scenario
-
-scenario_elements = [
-    ScenarioFlow(
-        resource_index['energy'],
-        value = 8,
-        out_process = processes_index['energy_sink']
-    )
+from mat_dp_core import EqConstraint
+constraints = [
+    EqConstraint(
+        "recycled pizza box ratio",
+        pizza_box_producer - recycled_pizza_box_producer,
+        0,
+    ),
+    EqConstraint("required energy", energy_grid, 8),
 ]
-scenario = Scenario(policy, scenario_elements)
+```
+
+## Step 4: Define an objective function
+
+Once we've established all of our constraints, we must define an objective function. The below example specifies we minimise the total number of runs:
+
+```py
+# Minimise total number of runs
+objective = (
+    cardboard_producer
+    + recycled_cardboard_producer
+    + pizza_box_producer
+    + recycled_pizza_box_producer
+    + power_plant
+    + energy_grid
+)
 ```
 
 ## Step 5: Make a measurement
 
 We must now measure the number of pizza boxes to burn.
 
-We can specify an out_process, in_process or both here. Note that it will sum over the in_processes if one is not specified, and sum over the out_processes if one is not specified.
-
-We can also specify a number of runs in our scenario.
-
 ```py
-from mat_dp_core import FlowMeasure, RunMeasure
-resource_usage = scenario.measure_flow(
-    FlowMeasure(
-        resource_index['pizza_box'],
-        out_process = processes_index['burn_pizza_box']
-    )
-)
+from mat_dp_core import Measure
+
+measurement = Measure(resources, processes, constraints, objective)
+print(measurement.resource(pizza_box))
 ```
