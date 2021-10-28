@@ -190,11 +190,11 @@ class Processes:
         self._processes.append(process_inner)
         return process_out
 
-    def load(self, processes: Sequence[Tuple[ProcessName, ArrayLike]]):
+    def load(self, processes: Sequence[Tuple[ProcessName, Sequence[Tuple[Resource, float]]]]):
         """
         Load some additional processes in bulk
-        """
-        starmap(self.create, processes)
+        """        
+        starmap(self.create, [[process_name, *resources] for process_name, resources in processes])
 
     def dump(self) -> Sequence[Tuple[ProcessName, ArrayLike]]:
         """
@@ -328,7 +328,6 @@ class Measure:
     ):
         self._resources = resources
         self._processes = processes
-        print(processes._processes)
         self._run_vector = self._solve(
             resources, processes, constraints, objective, maxiter
         )
