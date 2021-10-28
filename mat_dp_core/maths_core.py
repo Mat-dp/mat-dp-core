@@ -190,6 +190,18 @@ class Processes:
         self._processes.append(process_inner)
         return process_out
 
+    def load(self, processes: Sequence[Tuple[ProcessName, ArrayLike]]):
+        """
+        Load some additional processes in bulk
+        """
+        starmap(self.create, processes)
+
+    def dump(self) -> Sequence[Tuple[ProcessName, ArrayLike]]:
+        """
+        Dump processes in bulk
+        """
+        return self._processes
+
     def __len__(self):
         return len(self._processes)
 
