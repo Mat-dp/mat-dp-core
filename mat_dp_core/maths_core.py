@@ -190,11 +190,22 @@ class Processes:
         self._processes.append(process_inner)
         return process_out
 
-    def load(self, processes: Sequence[Tuple[ProcessName, Sequence[Tuple[Resource, float]]]]):
+    def load(
+        self,
+        processes: Sequence[
+            Tuple[ProcessName, Sequence[Tuple[Resource, float]]]
+        ],
+    ):
         """
         Load some additional processes in bulk
-        """        
-        starmap(self.create, [[process_name, *resources] for process_name, resources in processes])
+        """
+        starmap(
+            self.create,
+            [
+                [process_name, *resources]
+                for process_name, resources in processes
+            ],
+        )
 
     def dump(self) -> Sequence[Tuple[ProcessName, ndarray]]:
         """
@@ -312,7 +323,9 @@ class Measure:
     _resources: Resources
     _processes: Processes
     _run_vector: ndarray  # cols: processes
-    _process_demands: Optional[ndarray]  # cols: processes, rows: resources (resources, processes)
+    _process_demands: Optional[
+        ndarray
+    ]  # cols: processes, rows: resources (resources, processes)
 
     _resource_matrix: Optional[ndarray]
     _flow_matrix: ndarray  # (process, process, resource)
@@ -358,18 +371,37 @@ class Measure:
 
     @overload
     def resource(self) -> Sequence[Tuple[Process, Resource, float]]:
+        """
+        Returns measurements for all processes and resources.
+        """
         ...
 
     @overload
     def resource(self, arg1: Process) -> Sequence[Tuple[Resource, float]]:
+        """
+        arg1: A process to be measured
+
+        Returns the input and output resource values for the process specified.
+        """
         ...
 
     @overload
     def resource(self, arg1: Resource) -> Sequence[Tuple[Process, float]]:
+        """
+        arg1: A resource to be measured
+
+        Returns how much each process consumes or produces of the resource provided.
+        """
         ...
 
     @overload
     def resource(self, arg1: Process, arg2: Resource) -> float:
+        """
+        arg1: A process to be measured
+        arg2: A resource to be measured
+
+        Returns how much this process produces or consumes of this resource.
+        """
         ...
 
     def resource(
@@ -383,7 +415,9 @@ class Measure:
         float,
     ]:
         if self._process_demands is None:
-            self._process_demands = np.transpose(np.array([process.array for process in self._processes]))
+            self._process_demands = np.transpose(
+                np.array([process.array for process in self._processes])
+            )
         if self._resource_matrix is None:
             self._resource_matrix = (
                 np.full(
@@ -393,7 +427,17 @@ class Measure:
                 * self._process_demands
             )
         if arg1 is None and arg2 is None:
-            raise NotImplementedError  # TODO: implement
+            output = []
+            for p in self._processes:
+                for r in self._resources:
+                    output.append(
+                        (
+                            p,
+                            r,
+                            self._resource_matrix[r.index][p.index],
+                        )
+                    )
+            return output
         elif isinstance(arg1, Process) and arg2 is None:
             return list(
                 zip(
@@ -408,7 +452,7 @@ class Measure:
         elif arg1 is not None and arg2 is not None:
             return self._resource_matrix[arg2.index][arg1.index]
         else:
-            raise NotImplementedError  # TODO: implement
+            assert False
 
     @overload
     def flow(self) -> Sequence[Tuple[Process, Process, Resource, float]]:
@@ -561,8 +605,8 @@ class Measure:
             try:
                 # TODO: confirm that the inequalities were correctly satisfied
                 return linalg.solve(
-                    a = A_proc + A_eq_con + A_le_con, 
-                    b = b_proc + b_eq_con + b_le_con
+                    a=A_proc + A_eq_con + A_le_con,
+                    b=b_proc + b_eq_con + b_le_con,
                 )
             except linalg.LinAlgError:
                 # Determine whether the solution was under- or overconstrained
@@ -592,11 +636,11 @@ class Measure:
                 options["maxiter"] = maxiter
 
             res = linprog(
-                c = coefficients,
-                A_ub = A_le_con if len(A_le_con) > 0 else None,
-                b_ub = b_le_con if len(b_le_con) > 0 else None,
-                A_eq = np.concatenate((A_proc, A_eq_con)),
-                b_eq = np.concatenate((b_proc, b_eq_con)),
+                c=coefficients,
+                A_ub=A_le_con if len(A_le_con) > 0 else None,
+                b_ub=b_le_con if len(b_le_con) > 0 else None,
+                A_eq=np.concatenate((A_proc, A_eq_con)),
+                b_eq=np.concatenate((b_proc, b_eq_con)),
                 options=options,
             )
 
