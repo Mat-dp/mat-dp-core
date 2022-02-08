@@ -10,7 +10,7 @@ from typing import (
 )
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy import ndarray
 from scipy import linalg
 from scipy.optimize import linprog
 from sympy import Matrix
@@ -143,7 +143,7 @@ class Process:
         return self._parent._processes[self.index][0]
 
     @property
-    def array(self) -> ArrayLike:
+    def array(self) -> ndarray:
         return self._parent._processes[self.index][1]
 
     def __mul__(self, other: float) -> ProcessExpr:
@@ -173,7 +173,7 @@ class Process:
 
 class Processes:
     # Maps process names to resource demands
-    _processes: MutableSequence[Tuple[ProcessName, ArrayLike]] = []
+    _processes: MutableSequence[Tuple[ProcessName, ndarray]] = []
 
     def create(
         self, name: ProcessName, *resources: Tuple[Resource, float]
@@ -196,7 +196,7 @@ class Processes:
         """        
         starmap(self.create, [[process_name, *resources] for process_name, resources in processes])
 
-    def dump(self) -> Sequence[Tuple[ProcessName, ArrayLike]]:
+    def dump(self) -> Sequence[Tuple[ProcessName, ndarray]]:
         """
         Dump processes in bulk
         """
@@ -212,7 +212,7 @@ class Processes:
         return map(self.__getitem__, range(len(self)))
 
 
-def pack_constraint(constraint: Union[Process, ProcessExpr]) -> ArrayLike:
+def pack_constraint(constraint: Union[Process, ProcessExpr]) -> ndarray:
     constraint *= 1  # Converts Process to ProcessExpr
     proc_max_index = max((process.index for process in constraint)) + 1
     array = np.zeros(proc_max_index)
@@ -223,7 +223,7 @@ def pack_constraint(constraint: Union[Process, ProcessExpr]) -> ArrayLike:
 
 class _Constraint:
     name: str
-    array: ArrayLike
+    array: ndarray
     bound: float
 
     def __init__(
@@ -311,12 +311,12 @@ class NumericalDifficulties(Exception):
 class Measure:
     _resources: Resources
     _processes: Processes
-    _run_vector: ArrayLike  # cols: processes
-    _process_demands: ArrayLike  # cols: processes, rows: resources (resources, processes)
+    _run_vector: ndarray  # cols: processes
+    _process_demands: Optional[ndarray]  # cols: processes, rows: resources (resources, processes)
 
-    _resource_matrix: Optional[ArrayLike]
-    _flow_matrix: ArrayLike  # (process, process, resource)
-    _cumulative_resource_matrix: ArrayLike
+    _resource_matrix: Optional[ndarray]
+    _flow_matrix: ndarray  # (process, process, resource)
+    _cumulative_resource_matrix: ndarray
 
     def __init__(
         self,
@@ -532,10 +532,10 @@ class Measure:
 
         # Add constraints for each specified constraint
 
-        Al_eq = []
-        bl_eq = []
-        Al_le = []
-        bl_le = []
+        A_eq_con_list = []
+        b_eq_con_list = []
+        A_le_con_list = []
+        b_le_con_list = []
         eq_constraints = []
         le_constraints = []
         for constraint in constraints:
@@ -544,29 +544,32 @@ class Measure:
             )  # TODO: find correct type for this
             if isinstance(constraint, EqConstraint):
                 eq_constraints.append(constraint)
-                Al_eq.append(constraint.array)
-                bl_eq.append(constraint.bound)
+                A_eq_con_list.append(constraint.array)
+                b_eq_con_list.append(constraint.bound)
             elif isinstance(constraint, LeConstraint):
                 le_constraints.append(constraint)
-                Al_le.append(constraint.array)
-                bl_le.append(constraint.bound)
+                A_le_con_list.append(constraint.array)
+                b_le_con_list.append(constraint.bound)
             else:
                 assert False
-        A_eq = np.array(Al_eq)
-        b_eq = np.array(bl_eq)
-        A_le = np.array(Al_le)
-        b_le = np.array(bl_le)
+        A_eq_con = np.array(A_eq_con_list)
+        b_eq_con = np.array(b_eq_con_list)
+        A_le_con = np.array(A_le_con_list)
+        b_le_con = np.array(b_le_con_list)
 
         if objective is None:
             try:
                 # TODO: confirm that the inequalities were correctly satisfied
-                return linalg.solve(A_proc + A_eq + A_le, b_proc, b_eq + b_le)
+                return linalg.solve(
+                    a = A_proc + A_eq_con + A_le_con, 
+                    b = b_proc + b_eq_con + b_le_con
+                )
             except linalg.LinAlgError:
                 # Determine whether the solution was under- or overconstrained
                 # https://towardsdatascience.com/how-do-you-use-numpy-scipy-and-sympy-to-solve-systems-of-linear-equations-9afed2c388af
                 augmented_A = Matrix(
-                    [A + [b] for A, b in zip(A_eq, b_eq)]
-                    + [A + [b] for A, b in zip(A_le, b_le)]
+                    [A + [b] for A, b in zip(A_eq_con, b_eq_con)]
+                    + [A + [b] for A, b in zip(A_le_con, b_le_con)]
                 )
                 rref = augmented_A.rref()
                 if len(rref[1]) < len(rref[0]):
@@ -578,7 +581,7 @@ class Measure:
                     raise Overconstrained([], [], [])
         else:
             # Build objective vector
-            c = pack_constraint(objective)
+            coefficients = pack_constraint(objective)
 
             # Solve
             # TODO: optimise with callback
@@ -589,11 +592,11 @@ class Measure:
                 options["maxiter"] = maxiter
 
             res = linprog(
-                c,
-                A_le if len(A_le) > 0 else None,
-                b_le if len(b_le) > 0 else None,
-                np.concatenate((A_proc, A_eq)),
-                np.concatenate((b_proc, b_eq)),
+                c = coefficients,
+                A_ub = A_le_con if len(A_le_con) > 0 else None,
+                b_ub = b_le_con if len(b_le_con) > 0 else None,
+                A_eq = np.concatenate((A_proc, A_eq_con)),
+                b_eq = np.concatenate((b_proc, b_eq_con)),
                 options=options,
             )
 
