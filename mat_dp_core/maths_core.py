@@ -329,7 +329,7 @@ class Measure:
 
     _resource_matrix: Optional[ndarray]  # (resource, process)
     _flow_matrix: Optional[ndarray]  # (process, process, resource)
-    _cumulative_resource_matrix: Optional[ndarray]
+    _cumulative_resource_matrix: Optional[ndarray] # (resource, process)
 
     def __init__(
         self,
@@ -567,8 +567,7 @@ class Measure:
                                 )
                             )
             return output
-        elif arg1 is not None and arg2 is None and arg3 is None:
-            assert isinstance(arg1, Resource)
+        elif isinstance(arg1, Resource) and arg2 is None and arg3 is None:
             output = []
             for p1 in self._processes:
                 for p2 in self._processes:
@@ -583,8 +582,7 @@ class Measure:
                             )
                         )
             return output
-        elif arg1 is not None and arg2 is not None and arg3 is None:
-            assert isinstance(arg1, Process)
+        elif isinstance(arg1, Process) and arg2 is not None and arg3 is None:
             output = []
             if arg1.index == arg2.index:
                 raise ValueError(f"Same process {arg1.name} supplied")
@@ -712,22 +710,41 @@ class Measure:
 
     @overload
     def cumulative_resource(self) -> Sequence[Tuple[Process, Resource, float]]:
+        """
+        Returns the amount of each resource used for the entire chain of processes that led to each process.
+        """
         ...
 
     @overload
     def cumulative_resource(
         self, arg1: Process
     ) -> Sequence[Tuple[Resource, float]]:
+        """
+        arg1: The process using resource
+
+        Returns the amount of each resource used for the entire chain of processes that led to this process.
+        """
         ...
 
     @overload
     def cumulative_resource(
         self, arg1: Resource
     ) -> Sequence[Tuple[Process, float]]:
+        """
+        arg1: The resource we are measuring
+
+        Returns the amount of resource used for the entire chain of processes that led to each process.
+        """
         ...
 
     @overload
     def cumulative_resource(self, arg1: Process, arg2: Resource) -> float:
+        """
+        arg1: The process using resource
+        arg2: The resource we are measuring
+
+        Returns the amount of resource used for the entire chain of processes that led to this process.
+        """
         ...
 
     def cumulative_resource(
@@ -740,7 +757,21 @@ class Measure:
         Sequence[Tuple[Process, float]],
         float,
     ]:
-        raise NotImplementedError  # TODO: implement
+        self._prepare_flow() # TODO: Implement
+        assert self._flow_matrix is not None
+        if self._cumulative_resource_matrix is None:
+            raise NotImplementedError
+        
+        if arg1 is None and arg2 is None:
+            raise NotImplementedError
+        elif isinstance(arg1, Process) and arg2 is None:
+            raise NotImplementedError
+        elif isinstance(arg1, Resource) and arg2 is None:
+            raise NotImplementedError
+        elif arg1 is not None and arg2 is not None:
+            raise NotImplementedError
+        else:
+            assert False
 
     def _solve(
         self,
@@ -764,7 +795,7 @@ class Measure:
         for process in processes:
             process.array.resize(
                 len(resources), refcheck=False
-            )  # TODO: find correct type for this
+            )
         # Pad arrays out to the correct size:
         # The processes weren't necessarily aware of the total number of
         # resources at the time they were created
@@ -784,7 +815,7 @@ class Measure:
         for constraint in constraints:
             constraint.array.resize(
                 len(processes)
-            )  # TODO: find correct type for this
+            )
             if isinstance(constraint, EqConstraint):
                 eq_constraints.append(constraint)
                 A_eq_con_list.append(constraint.array)
