@@ -328,7 +328,7 @@ class Measure:
     ]  # cols: processes, rows: resources (resources, processes)
 
     _resource_matrix: Optional[ndarray]  # (resource, process)
-    _flow_matrix: Optional[ndarray]  # (process, process, resource)
+    _flow_matrix: Optional[ndarray]  # (resource, process, process)
     _cumulative_resource_matrix: Optional[ndarray]  # (resource, process)
 
     def __init__(
@@ -464,13 +464,6 @@ class Measure:
                 * self._process_demands
             )
         if self._flow_matrix is None:
-            self._flow_matrix = np.zeros(
-                (
-                    len(self._processes),
-                    len(self._processes),
-                    len(self._resources),
-                )
-            )
             total_res_produced_vector = np.sum(
                 self._resource_matrix, where=self._resource_matrix > 0, axis=1
             )
@@ -494,19 +487,19 @@ class Measure:
                 np.transpose(self._flow_matrix, axes=(0, 2, 1)),
             )
             """
-            Equivalent to:
+            Equivalent to, but faster than:
             for i, res in enumerate(self._resource_matrix):
                 total_res_produced = sum([i for i in res if i > 0])
                 for j, consumed_v in enumerate(res):
                     if consumed_v < 0:
                         for k, produced_v in enumerate(res):
                             if produced_v > 0:
-                                self._flow_matrix[j][k][i] = (
+                                self._flow_matrix[i][j][k] = (
                                     consumed_v
                                     * produced_v
                                     / total_res_produced
                                 )
-                                self._flow_matrix[k][j][i] = (
+                                self._flow_matrix[i][k][j] = (
                                     -consumed_v
                                     * produced_v
                                     / total_res_produced
@@ -576,8 +569,8 @@ class Measure:
                                     p1,
                                     p2,
                                     r,
-                                    self._flow_matrix[p1.index][p2.index][
-                                        r.index
+                                    self._flow_matrix[r.index][p1.index][
+                                        p2.index
                                     ],
                                 )
                             )
@@ -591,8 +584,8 @@ class Measure:
                             (
                                 p1,
                                 p2,
-                                self._flow_matrix[p1.index][p2.index][
-                                    arg1.index
+                                self._flow_matrix[arg1.index][p1.index][
+                                    p2.index
                                 ],
                             )
                         )
@@ -605,7 +598,7 @@ class Measure:
                 output.append(
                     (
                         r,
-                        self._flow_matrix[arg1.index][arg2.index][r.index],
+                        self._flow_matrix[r.index][arg1.index][arg2.index],
                     )
                 )
             return output
@@ -613,7 +606,7 @@ class Measure:
             assert isinstance(arg1, Process)
             if arg1.index == arg2.index:
                 raise ValueError(f"Same process {arg1.name} supplied")
-            return self._flow_matrix[arg1.index][arg2.index][arg3.index]
+            return self._flow_matrix[arg3.index][arg1.index][arg2.index]
         else:
             assert False
 
@@ -651,7 +644,7 @@ class Measure:
                         [
                             flow
                             for flow in self._flow_matrix[
-                                process.index, :, r.index
+                                r.index, process.index, :
                             ]
                             if flow > 0
                         ]
@@ -664,7 +657,7 @@ class Measure:
                 [
                     flow
                     for flow in self._flow_matrix[
-                        process.index, :, resource.index
+                        resource.index, process.index, :
                     ]
                     if flow > 0
                 ]
@@ -704,7 +697,7 @@ class Measure:
                         [
                             flow
                             for flow in self._flow_matrix[
-                                :, process.index, r.index
+                                r.index, :, process.index
                             ]
                             if flow > 0
                         ]
@@ -717,7 +710,7 @@ class Measure:
                 [
                     flow
                     for flow in self._flow_matrix[
-                        :, process.index, resource.index
+                        resource.index, :, process.index
                     ]
                     if flow > 0
                 ]
