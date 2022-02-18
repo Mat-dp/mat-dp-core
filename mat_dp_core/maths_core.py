@@ -329,7 +329,7 @@ class Measure:
 
     _resource_matrix: Optional[ndarray]  # (resource, process)
     _flow_matrix: Optional[ndarray]  # (process, process, resource)
-    _cumulative_resource_matrix: Optional[ndarray] # (resource, process)
+    _cumulative_resource_matrix: Optional[ndarray]  # (resource, process)
 
     def __init__(
         self,
@@ -450,20 +450,6 @@ class Measure:
         else:
             assert False
 
-    def _calculate_flow(self, in_flow: float, out_flow: float) -> float:
-        if (
-            (in_flow == 0 or out_flow == 0)
-            or (in_flow > 0 and out_flow > 0)
-            or (in_flow < 0 and out_flow < 0)
-        ):
-            return 0
-        elif in_flow > 0 and out_flow < 0:
-            return min(abs(in_flow), abs(out_flow))
-        elif in_flow < 0 and out_flow > 0:
-            return -min(abs(in_flow), abs(out_flow))
-        else:
-            assert False
-
     def _prepare_flow(self):
         if self._process_demands is None:
             self._process_demands = np.transpose(
@@ -485,18 +471,22 @@ class Measure:
                     len(self._resources),
                 )
             )
-            for in_proc in self._processes:
-                for out_proc in self._processes:
-                    for res in self._resources:
-                        start_res = self._resource_matrix[res.index][
-                            in_proc.index
-                        ]
-                        end_res = self._resource_matrix[res.index][
-                            out_proc.index
-                        ]
-                        self._flow_matrix[in_proc.index][out_proc.index][
-                            res.index
-                        ] = self._calculate_flow(start_res, end_res)
+            for i, res in enumerate(self._resource_matrix):
+                total_res_produced = sum([i for i in res if i > 0])
+                for j, consumed_v in enumerate(res):
+                    if consumed_v < 0:
+                        for k, produced_v in enumerate(res):
+                            if produced_v > 0:
+                                self._flow_matrix[j][k][i] = (
+                                    consumed_v
+                                    * produced_v
+                                    / total_res_produced
+                                )
+                                self._flow_matrix[k][j][i] = (
+                                    -consumed_v
+                                    * produced_v
+                                    / total_res_produced
+                                )
 
     @overload
     def flow(self) -> Sequence[Tuple[Process, Process, Resource, float]]:
@@ -757,11 +747,11 @@ class Measure:
         Sequence[Tuple[Process, float]],
         float,
     ]:
-        self._prepare_flow() # TODO: Implement
+        self._prepare_flow()  # TODO: Implement
         assert self._flow_matrix is not None
         if self._cumulative_resource_matrix is None:
             raise NotImplementedError
-        
+
         if arg1 is None and arg2 is None:
             raise NotImplementedError
         elif isinstance(arg1, Process) and arg2 is None:
@@ -793,9 +783,7 @@ class Measure:
         """
         # Add constraints for each process
         for process in processes:
-            process.array.resize(
-                len(resources), refcheck=False
-            )
+            process.array.resize(len(resources), refcheck=False)
         # Pad arrays out to the correct size:
         # The processes weren't necessarily aware of the total number of
         # resources at the time they were created
@@ -813,9 +801,7 @@ class Measure:
         eq_constraints = []
         le_constraints = []
         for constraint in constraints:
-            constraint.array.resize(
-                len(processes)
-            )
+            constraint.array.resize(len(processes))
             if isinstance(constraint, EqConstraint):
                 eq_constraints.append(constraint)
                 A_eq_con_list.append(constraint.array)
