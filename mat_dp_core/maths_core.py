@@ -471,6 +471,30 @@ class Measure:
                     len(self._resources),
                 )
             )
+            total_res_produced_vector = np.sum(
+                self._resource_matrix, where=self._resource_matrix > 0, axis=1
+            )
+            produced = np.where(
+                self._resource_matrix > 0, self._resource_matrix, 0
+            )
+            consumed = np.where(
+                self._resource_matrix < 0, self._resource_matrix, 0
+            )
+            self._flow_matrix = np.array(
+                [
+                    np.tensordot(consumed[i], produced[i], axes=0)
+                    / total_res_produced
+                    for i, total_res_produced in enumerate(
+                        total_res_produced_vector
+                    )
+                ]
+            )
+            self._flow_matrix = np.subtract(
+                self._flow_matrix,
+                np.transpose(self._flow_matrix, axes=(0, 2, 1)),
+            )
+            """
+            Equivalent to:
             for i, res in enumerate(self._resource_matrix):
                 total_res_produced = sum([i for i in res if i > 0])
                 for j, consumed_v in enumerate(res):
@@ -487,6 +511,7 @@ class Measure:
                                     * produced_v
                                     / total_res_produced
                                 )
+            """
 
     @overload
     def flow(self) -> Sequence[Tuple[Process, Process, Resource, float]]:
