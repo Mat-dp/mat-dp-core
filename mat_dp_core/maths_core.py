@@ -473,38 +473,19 @@ class Measure:
             consumed = np.where(
                 self._resource_matrix < 0, self._resource_matrix, 0
             )
-            self._flow_matrix = np.array(
-                [
-                    np.tensordot(consumed[i], produced[i], axes=0)
-                    / total_res_produced
-                    for i, total_res_produced in enumerate(
-                        total_res_produced_vector
-                    )
-                ]
+            reciprocal_total_res = np.reciprocal(
+                total_res_produced_vector,
+                where=total_res_produced_vector != 0,
+                dtype=float,
             )
+            unreflected_flow_matrix = np.einsum(
+                "i, ij, ik -> ijk", reciprocal_total_res, consumed, produced
+            )
+
             self._flow_matrix = np.subtract(
-                self._flow_matrix,
-                np.transpose(self._flow_matrix, axes=(0, 2, 1)),
+                unreflected_flow_matrix,
+                np.transpose(unreflected_flow_matrix, axes=(0, 2, 1)),
             )
-            """
-            Equivalent to, but faster than:
-            for i, res in enumerate(self._resource_matrix):
-                total_res_produced = sum([i for i in res if i > 0])
-                for j, consumed_v in enumerate(res):
-                    if consumed_v < 0:
-                        for k, produced_v in enumerate(res):
-                            if produced_v > 0:
-                                self._flow_matrix[i][j][k] = (
-                                    consumed_v
-                                    * produced_v
-                                    / total_res_produced
-                                )
-                                self._flow_matrix[i][k][j] = (
-                                    -consumed_v
-                                    * produced_v
-                                    / total_res_produced
-                                )
-            """
 
     @overload
     def flow(self) -> Sequence[Tuple[Process, Process, Resource, float]]:
