@@ -841,7 +841,7 @@ class Measure:
         else:
             # Build objective vector
             coefficients = pack_constraint(objective)
-
+            coefficients.resize(len(processes))
             # Solve
             # TODO: optimise with callback
             # TODO: optimise method
