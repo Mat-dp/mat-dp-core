@@ -753,16 +753,60 @@ class Measure:
         self._prepare_flow()  # TODO: Implement
         assert self._flow_matrix is not None
         if self._cumulative_resource_matrix is None:
-            raise NotImplementedError
+            process_process_matrix = np.array(
+                [
+                    self._solve(
+                        self._resources,
+                        self._processes,
+                        constraints=[
+                            EqConstraint(
+                                "{process.name}_no_runs",
+                                process,
+                                self._run_vector[process.index],
+                            )
+                        ],
+                        objective=None,
+                        maxiter=None,
+                    )
+                    for process in self._processes
+                ]
+            )
+            assert self._process_demands is not None
+            production = np.where(
+                self._process_demands > 0, self._process_demands, 0
+            )
+            self._cumulative_resource_matrix = np.einsum(
+                "ij, kj -> ki", process_process_matrix, production
+            )
 
         if arg1 is None and arg2 is None:
-            raise NotImplementedError
+            output = []
+            for p in self._processes:
+                for r in self._resources:
+                    output.append(
+                        (
+                            p,
+                            r,
+                            self._cumulative_resource_matrix[r.index][p.index],
+                        )
+                    )
+            return output
         elif isinstance(arg1, Process) and arg2 is None:
-            raise NotImplementedError
+            return list(
+                zip(
+                    self._resources,
+                    self._cumulative_resource_matrix[:, arg1.index],
+                )
+            )
         elif isinstance(arg1, Resource) and arg2 is None:
-            raise NotImplementedError
+            return list(
+                zip(
+                    self._processes,
+                    self._cumulative_resource_matrix[arg1.index],
+                )
+            )
         elif arg1 is not None and arg2 is not None:
-            raise NotImplementedError
+            return self._cumulative_resource_matrix[arg2.index][arg1.index]
         else:
             assert False
 
@@ -815,17 +859,20 @@ class Measure:
                 b_le_con_list.append(constraint.bound)
             else:
                 assert False
-        A_eq_con = np.array(A_eq_con_list)
-        b_eq_con = np.array(b_eq_con_list)
-        A_le_con = np.array(A_le_con_list)
-        b_le_con = np.array(b_le_con_list)
+        A_eq_con = np.array(A_eq_con_list, dtype=float)
+        b_eq_con = np.array(b_eq_con_list, dtype=float)
+        A_le_con = np.array(A_le_con_list, dtype=float)
+        b_le_con = np.array(b_le_con_list, dtype=float)
 
         if objective is None:
+            if len(b_le_con_list) != 0:
+                raise ValueError(
+                    "Le constraints not allowed for objective is None case"
+                )
             try:
-                # TODO: confirm that the inequalities were correctly satisfied
                 return linalg.solve(
-                    a=A_proc + A_eq_con + A_le_con,
-                    b=b_proc + b_eq_con + b_le_con,
+                    a=np.concatenate((A_proc, A_eq_con)),
+                    b=np.concatenate((b_proc, b_eq_con)),
                 )
             except linalg.LinAlgError:
                 # Determine whether the solution was under- or overconstrained
