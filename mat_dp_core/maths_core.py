@@ -55,11 +55,11 @@ class Resources:
         )
         return resource_out
 
-    def load(self, resources: Sequence[Tuple[ResourceName, Unit]]):
+    def load(self, resources: Sequence[Tuple[ResourceName, Unit]]) -> List[Resource]:
         """
         Load some additional resources in bulk
         """
-        starmap(self.create, resources)
+        return list(starmap(self.create, resources))
 
     def dump(self) -> Sequence[Tuple[ResourceName, Unit]]:
         """
@@ -195,17 +195,17 @@ class Processes:
         processes: Sequence[
             Tuple[ProcessName, Sequence[Tuple[Resource, float]]]
         ],
-    ):
+    )-> List[Process]:
         """
         Load some additional processes in bulk
         """
-        starmap(
+        return list(starmap(
             self.create,
             [
                 [process_name, *resources]
                 for process_name, resources in processes
             ],
-        )
+        ))
 
     def dump(self) -> Sequence[Tuple[ProcessName, ndarray]]:
         """
