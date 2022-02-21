@@ -32,7 +32,6 @@ solar = processes.create(
 coal = processes.create("coal", (concrete, -5), (energy, +1), (electronics, 0))
 
 
-
 wind_con = ResourceConstraint(energy, wind, resources, processes, 5)
 coal_con = ResourceConstraint(energy, coal, resources, processes, 5)
 solar_con = ResourceConstraint(energy, solar, resources, processes, 5)
@@ -48,7 +47,7 @@ objective = (
     + wind
     + solar
     + coal
-    + energy_grid
+    + energy_producer
 )
 
 solution = Measure(resources, processes, constraints, objective)

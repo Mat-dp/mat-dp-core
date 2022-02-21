@@ -90,7 +90,7 @@ class ResourceConstraint(EqConstraint):
         else:
             raise ValueError("Invalid demand")
 
-        no_runs =  resource_bound /required_resource
+        no_runs = resource_bound / required_resource
 
         if positive:
             phrase = "consumption"
