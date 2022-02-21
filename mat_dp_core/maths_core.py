@@ -10,7 +10,7 @@ from typing import (
 )
 
 import numpy as np
-from numpy.typing import ArrayLike
+from numpy import ndarray
 from scipy import linalg
 from scipy.optimize import linprog
 from sympy import Matrix
@@ -143,7 +143,7 @@ class Process:
         return self._parent._processes[self.index][0]
 
     @property
-    def array(self) -> ArrayLike:
+    def array(self) -> ndarray:
         return self._parent._processes[self.index][1]
 
     def __mul__(self, other: float) -> ProcessExpr:
@@ -173,7 +173,7 @@ class Process:
 
 class Processes:
     # Maps process names to resource demands
-    _processes: MutableSequence[Tuple[ProcessName, ArrayLike]] = []
+    _processes: MutableSequence[Tuple[ProcessName, ndarray]] = []
 
     def create(
         self, name: ProcessName, *resources: Tuple[Resource, float]
@@ -190,13 +190,24 @@ class Processes:
         self._processes.append(process_inner)
         return process_out
 
-    def load(self, processes: Sequence[Tuple[ProcessName, Sequence[Tuple[Resource, float]]]]) -> List[Process]:
+    def load(
+        self,
+        processes: Sequence[
+            Tuple[ProcessName, Sequence[Tuple[Resource, float]]]
+        ],
+    )-> List[Process]:
         """
         Load some additional processes in bulk
-        """        
-        return list(starmap(self.create, [[process_name, *resources] for process_name, resources in processes]))
+        """
+        return list(starmap(
+            self.create,
+            [
+                [process_name, *resources]
+                for process_name, resources in processes
+            ],
+        ))
 
-    def dump(self) -> Sequence[Tuple[ProcessName, ArrayLike]]:
+    def dump(self) -> Sequence[Tuple[ProcessName, ndarray]]:
         """
         Dump processes in bulk
         """
@@ -212,7 +223,7 @@ class Processes:
         return map(self.__getitem__, range(len(self)))
 
 
-def pack_constraint(constraint: Union[Process, ProcessExpr]) -> ArrayLike:
+def pack_constraint(constraint: Union[Process, ProcessExpr]) -> ndarray:
     constraint *= 1  # Converts Process to ProcessExpr
     proc_max_index = max((process.index for process in constraint)) + 1
     array = np.zeros(proc_max_index)
@@ -223,7 +234,7 @@ def pack_constraint(constraint: Union[Process, ProcessExpr]) -> ArrayLike:
 
 class _Constraint:
     name: str
-    array: ArrayLike
+    array: ndarray
     bound: float
 
     def __init__(
@@ -311,12 +322,14 @@ class NumericalDifficulties(Exception):
 class Measure:
     _resources: Resources
     _processes: Processes
-    _run_vector: ArrayLike  # cols: processes
-    _process_demands: ArrayLike  # cols: processes, rows: resources (resources, processes)
+    _run_vector: ndarray  # cols: processes
+    _process_demands: Optional[
+        ndarray
+    ]  # cols: processes, rows: resources (resources, processes)
 
-    _resource_matrix: Optional[ArrayLike]
-    _flow_matrix: ArrayLike  # (process, process, resource)
-    _cumulative_resource_matrix: ArrayLike
+    _resource_matrix: Optional[ndarray]  # (resource, process)
+    _flow_matrix: Optional[ndarray]  # (resource, process, process)
+    _cumulative_resource_matrix: Optional[ndarray]  # (resource, process)
 
     def __init__(
         self,
@@ -332,12 +345,8 @@ class Measure:
             resources, processes, constraints, objective, maxiter
         )
         self._resource_matrix = None
-        self._flow_matrix = np.empty(
-            (len(processes), len(processes), len(resources))
-        )
-        self._cumulative_resource_matrix = np.empty(
-            (len(processes), len(resources))
-        )
+        self._flow_matrix = None
+        self._cumulative_resource_matrix = None
         self._process_demands = None
 
     @overload
@@ -358,18 +367,37 @@ class Measure:
 
     @overload
     def resource(self) -> Sequence[Tuple[Process, Resource, float]]:
+        """
+        Returns measurements for all processes and resources.
+        """
         ...
 
     @overload
     def resource(self, arg1: Process) -> Sequence[Tuple[Resource, float]]:
+        """
+        arg1: A process to be measured
+
+        Returns the input and output resource values for the process specified.
+        """
         ...
 
     @overload
     def resource(self, arg1: Resource) -> Sequence[Tuple[Process, float]]:
+        """
+        arg1: A resource to be measured
+
+        Returns how much each process consumes or produces of the resource provided.
+        """
         ...
 
     @overload
     def resource(self, arg1: Process, arg2: Resource) -> float:
+        """
+        arg1: A process to be measured
+        arg2: A resource to be measured
+
+        Returns how much this process produces or consumes of this resource.
+        """
         ...
 
     def resource(
@@ -383,7 +411,9 @@ class Measure:
         float,
     ]:
         if self._process_demands is None:
-            self._process_demands = np.transpose(np.array([process.array for process in self._processes]))
+            self._process_demands = np.transpose(
+                np.array([process.array for process in self._processes])
+            )
         if self._resource_matrix is None:
             self._resource_matrix = (
                 np.full(
@@ -393,7 +423,17 @@ class Measure:
                 * self._process_demands
             )
         if arg1 is None and arg2 is None:
-            raise NotImplementedError  # TODO: implement
+            output = []
+            for p in self._processes:
+                for r in self._resources:
+                    output.append(
+                        (
+                            p,
+                            r,
+                            self._resource_matrix[r.index][p.index],
+                        )
+                    )
+            return output
         elif isinstance(arg1, Process) and arg2 is None:
             return list(
                 zip(
@@ -408,24 +448,82 @@ class Measure:
         elif arg1 is not None and arg2 is not None:
             return self._resource_matrix[arg2.index][arg1.index]
         else:
-            raise NotImplementedError  # TODO: implement
+            assert False
+
+    def _prepare_flow(self):
+        if self._process_demands is None:
+            self._process_demands = np.transpose(
+                np.array([process.array for process in self._processes])
+            )
+        if self._resource_matrix is None:
+            self._resource_matrix = (
+                np.full(
+                    (len(self._resources), len(self._processes)),
+                    self._run_vector,
+                )
+                * self._process_demands
+            )
+        if self._flow_matrix is None:
+            total_res_produced_vector = np.sum(
+                self._resource_matrix, where=self._resource_matrix > 0, axis=1
+            )
+            produced = np.where(
+                self._resource_matrix > 0, self._resource_matrix, 0
+            )
+            consumed = np.where(
+                self._resource_matrix < 0, self._resource_matrix, 0
+            )
+            reciprocal_total_res = np.reciprocal(
+                total_res_produced_vector,
+                where=total_res_produced_vector != 0,
+                dtype=float,
+            )
+            unreflected_flow_matrix = np.einsum(
+                "i, ij, ik -> ijk", reciprocal_total_res, consumed, produced
+            )
+
+            self._flow_matrix = np.subtract(
+                unreflected_flow_matrix,
+                np.transpose(unreflected_flow_matrix, axes=(0, 2, 1)),
+            )
 
     @overload
     def flow(self) -> Sequence[Tuple[Process, Process, Resource, float]]:
+        """
+        Returns all flows between each process pair and each resource.
+        """
         ...
 
     @overload
     def flow(
         self, arg1: Process, arg2: Process
     ) -> Sequence[Tuple[Resource, float]]:
+        """
+        arg1: The process to measure the flow from
+        arg2: The process to measure the flow to
+
+        Returns all flows between the process pair specified.
+        """
         ...
 
     @overload
     def flow(self, arg1: Resource) -> Sequence[Tuple[Process, Process, float]]:
+        """
+        arg1: The resource to measure flows for
+
+        Returns all flows for the resource specified
+        """
         ...
 
     @overload
     def flow(self, arg1: Process, arg2: Process, arg3: Resource) -> float:
+        """
+        arg1: The process to measure the flow from
+        arg2: The process to measure the flow to
+        arg3: The resource to measure
+
+        Returns the value of resource flow for the given process pair and resource
+        """
         ...
 
     def flow(
@@ -439,52 +537,203 @@ class Measure:
         Sequence[Tuple[Process, Process, float]],
         float,
     ]:
-        raise NotImplementedError  # TODO: implement
+        self._prepare_flow()
+        assert self._flow_matrix is not None
+        if arg1 is None and arg2 is None and arg3 is None:
+            output = []
+            for p1 in self._processes:
+                for p2 in self._processes:
+                    for r in self._resources:
+                        if p1.index != p2.index:
+                            output.append(
+                                (
+                                    p1,
+                                    p2,
+                                    r,
+                                    self._flow_matrix[r.index][p1.index][
+                                        p2.index
+                                    ],
+                                )
+                            )
+            return output
+        elif isinstance(arg1, Resource) and arg2 is None and arg3 is None:
+            output = []
+            for p1 in self._processes:
+                for p2 in self._processes:
+                    if p1.index != p2.index:
+                        output.append(
+                            (
+                                p1,
+                                p2,
+                                self._flow_matrix[arg1.index][p1.index][
+                                    p2.index
+                                ],
+                            )
+                        )
+            return output
+        elif isinstance(arg1, Process) and arg2 is not None and arg3 is None:
+            output = []
+            if arg1.index == arg2.index:
+                raise ValueError(f"Same process {arg1.name} supplied")
+            for r in self._resources:
+                output.append(
+                    (
+                        r,
+                        self._flow_matrix[r.index][arg1.index][arg2.index],
+                    )
+                )
+            return output
+        elif arg1 is not None and arg2 is not None and arg3 is not None:
+            assert isinstance(arg1, Process)
+            if arg1.index == arg2.index:
+                raise ValueError(f"Same process {arg1.name} supplied")
+            return self._flow_matrix[arg3.index][arg1.index][arg2.index]
+        else:
+            assert False
 
     @overload
     def flow_from(self, process: Process) -> Sequence[Tuple[Resource, float]]:
+        """
+        process: The process material is flowing from
+
+        Returns the sum of all outflows from this process for each resource
+        """
         ...
 
     @overload
     def flow_from(self, process: Process, resource: Resource) -> float:
+        """
+        process: The process material is flowing from
+        resource: The resource that is flowing
+
+        Returns the sum of all outflows from this process for this resource
+        """
         ...
 
     def flow_from(
         self, process: Process, resource: Optional[Resource] = None
     ) -> Union[Sequence[Tuple[Resource, float]], float]:
-        raise NotImplementedError  # TODO: implement
+
+        self._prepare_flow()
+        assert self._flow_matrix is not None
+
+        if resource is None:
+            return [
+                (
+                    r,
+                    sum(
+                        [
+                            flow
+                            for flow in self._flow_matrix[
+                                r.index, process.index, :
+                            ]
+                            if flow > 0
+                        ]
+                    ),
+                )
+                for r in self._resources
+            ]
+        else:
+            return sum(
+                [
+                    flow
+                    for flow in self._flow_matrix[
+                        resource.index, process.index, :
+                    ]
+                    if flow > 0
+                ]
+            )
 
     @overload
     def flow_to(self, process: Process) -> Sequence[Tuple[Resource, float]]:
+        """
+        process: The process material is flowing into
+
+        Returns the sum of all inflows into this process for each resource
+        """
         ...
 
     @overload
     def flow_to(self, process: Process, resource: Resource) -> float:
+        """
+        process: The process material is flowing into
+        resource: The resource that is flowing
+
+        Returns the sum of all inflows into this process for this resource
+        """
         ...
 
     def flow_to(
         self, process: Process, resource: Optional[Resource] = None
     ) -> Union[Sequence[Tuple[Resource, float]], float]:
-        raise NotImplementedError  # TODO: implement
+
+        self._prepare_flow()
+        assert self._flow_matrix is not None
+
+        if resource is None:
+            return [
+                (
+                    r,
+                    sum(
+                        [
+                            flow
+                            for flow in self._flow_matrix[
+                                r.index, :, process.index
+                            ]
+                            if flow > 0
+                        ]
+                    ),
+                )
+                for r in self._resources
+            ]
+        else:
+            return sum(
+                [
+                    flow
+                    for flow in self._flow_matrix[
+                        resource.index, :, process.index
+                    ]
+                    if flow > 0
+                ]
+            )
 
     @overload
     def cumulative_resource(self) -> Sequence[Tuple[Process, Resource, float]]:
+        """
+        Returns the amount of each resource used for the entire chain of processes that led to each process.
+        """
         ...
 
     @overload
     def cumulative_resource(
         self, arg1: Process
     ) -> Sequence[Tuple[Resource, float]]:
+        """
+        arg1: The process using resource
+
+        Returns the amount of each resource used for the entire chain of processes that led to this process.
+        """
         ...
 
     @overload
     def cumulative_resource(
         self, arg1: Resource
     ) -> Sequence[Tuple[Process, float]]:
+        """
+        arg1: The resource we are measuring
+
+        Returns the amount of resource used for the entire chain of processes that led to each process.
+        """
         ...
 
     @overload
     def cumulative_resource(self, arg1: Process, arg2: Resource) -> float:
+        """
+        arg1: The process using resource
+        arg2: The resource we are measuring
+
+        Returns the amount of resource used for the entire chain of processes that led to this process.
+        """
         ...
 
     def cumulative_resource(
@@ -497,7 +746,21 @@ class Measure:
         Sequence[Tuple[Process, float]],
         float,
     ]:
-        raise NotImplementedError  # TODO: implement
+        self._prepare_flow()  # TODO: Implement
+        assert self._flow_matrix is not None
+        if self._cumulative_resource_matrix is None:
+            raise NotImplementedError
+
+        if arg1 is None and arg2 is None:
+            raise NotImplementedError
+        elif isinstance(arg1, Process) and arg2 is None:
+            raise NotImplementedError
+        elif isinstance(arg1, Resource) and arg2 is None:
+            raise NotImplementedError
+        elif arg1 is not None and arg2 is not None:
+            raise NotImplementedError
+        else:
+            assert False
 
     def _solve(
         self,
@@ -519,9 +782,7 @@ class Measure:
         """
         # Add constraints for each process
         for process in processes:
-            process.array.resize(
-                len(resources), refcheck=False
-            )  # TODO: find correct type for this
+            process.array.resize(len(resources), refcheck=False)
         # Pad arrays out to the correct size:
         # The processes weren't necessarily aware of the total number of
         # resources at the time they were created
@@ -532,41 +793,42 @@ class Measure:
 
         # Add constraints for each specified constraint
 
-        Al_eq = []
-        bl_eq = []
-        Al_le = []
-        bl_le = []
+        A_eq_con_list = []
+        b_eq_con_list = []
+        A_le_con_list = []
+        b_le_con_list = []
         eq_constraints = []
         le_constraints = []
         for constraint in constraints:
-            constraint.array.resize(
-                len(processes)
-            )  # TODO: find correct type for this
+            constraint.array.resize(len(processes))
             if isinstance(constraint, EqConstraint):
                 eq_constraints.append(constraint)
-                Al_eq.append(constraint.array)
-                bl_eq.append(constraint.bound)
+                A_eq_con_list.append(constraint.array)
+                b_eq_con_list.append(constraint.bound)
             elif isinstance(constraint, LeConstraint):
                 le_constraints.append(constraint)
-                Al_le.append(constraint.array)
-                bl_le.append(constraint.bound)
+                A_le_con_list.append(constraint.array)
+                b_le_con_list.append(constraint.bound)
             else:
                 assert False
-        A_eq = np.array(Al_eq)
-        b_eq = np.array(bl_eq)
-        A_le = np.array(Al_le)
-        b_le = np.array(bl_le)
+        A_eq_con = np.array(A_eq_con_list)
+        b_eq_con = np.array(b_eq_con_list)
+        A_le_con = np.array(A_le_con_list)
+        b_le_con = np.array(b_le_con_list)
 
         if objective is None:
             try:
                 # TODO: confirm that the inequalities were correctly satisfied
-                return linalg.solve(A_proc + A_eq + A_le, b_proc, b_eq + b_le)
+                return linalg.solve(
+                    a=A_proc + A_eq_con + A_le_con,
+                    b=b_proc + b_eq_con + b_le_con,
+                )
             except linalg.LinAlgError:
                 # Determine whether the solution was under- or overconstrained
                 # https://towardsdatascience.com/how-do-you-use-numpy-scipy-and-sympy-to-solve-systems-of-linear-equations-9afed2c388af
                 augmented_A = Matrix(
-                    [A + [b] for A, b in zip(A_eq, b_eq)]
-                    + [A + [b] for A, b in zip(A_le, b_le)]
+                    [A + [b] for A, b in zip(A_eq_con, b_eq_con)]
+                    + [A + [b] for A, b in zip(A_le_con, b_le_con)]
                 )
                 rref = augmented_A.rref()
                 if len(rref[1]) < len(rref[0]):
@@ -578,8 +840,8 @@ class Measure:
                     raise Overconstrained([], [], [])
         else:
             # Build objective vector
-            c = pack_constraint(objective)
-
+            coefficients = pack_constraint(objective)
+            coefficients.resize(len(processes))
             # Solve
             # TODO: optimise with callback
             # TODO: optimise method
@@ -589,11 +851,11 @@ class Measure:
                 options["maxiter"] = maxiter
 
             res = linprog(
-                c,
-                A_le if len(A_le) > 0 else None,
-                b_le if len(b_le) > 0 else None,
-                np.concatenate((A_proc, A_eq)),
-                np.concatenate((b_proc, b_eq)),
+                c=coefficients,
+                A_ub=A_le_con if len(A_le_con) > 0 else None,
+                b_ub=b_le_con if len(b_le_con) > 0 else None,
+                A_eq=np.concatenate((A_proc, A_eq_con)),
+                b_eq=np.concatenate((b_proc, b_eq_con)),
                 options=options,
             )
 

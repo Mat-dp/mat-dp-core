@@ -22,5 +22,6 @@ constraint = EqConstraint("burger consumption", mcdonalds, 10)
 objective = arable_farm + dairy_farm + 2 * mcdonalds
 
 solution = Measure(resources, processes, [constraint], objective)
+print(solution.flow_from(arable_farm))
 print(solution)
 print(solution._run_vector)

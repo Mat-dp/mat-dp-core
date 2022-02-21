@@ -1,0 +1,30 @@
+site_name: Mat-DP-Core
+
+theme:
+  name: 'material'
+  palette:
+    - scheme: default
+      primary: 'green'
+      accent: 'green'
+      toggle:
+          icon: material/lightbulb
+          name: Switch to dark mode
+    - scheme: slate
+      primary: 'green'
+      accent: 'light green'
+      toggle:
+          icon: material/lightbulb-outline
+          name: Switch to light mode
+  icon:
+    logo: fontawesome/solid/leaf
+
+markdown_extensions:
+  - admonition
+  - pymdownx.superfences
+  - toc:
+      permalink: true
+  - attr_list
+
+plugins:
+  - search:
+      separator: '[\s\-\.\_]+'
