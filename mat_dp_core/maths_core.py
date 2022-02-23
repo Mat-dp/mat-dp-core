@@ -41,7 +41,10 @@ class Resource:
 
 
 class Resources:
-    _resources: MutableSequence[Tuple[ResourceName, Unit]] = []
+    _resources: MutableSequence[Tuple[ResourceName, Unit]]
+
+    def __init__(self) -> None:
+        self._resources = []
 
     def create(self, name: ResourceName, unit: Unit = "ea") -> Resource:
         """
@@ -73,8 +76,22 @@ class Resources:
     def __len__(self):
         return len(self._resources)
 
-    def __getitem__(self, arg):
-        return Resource(index=arg, parent=self)
+    def __getitem__(self, arg: Union[int, str]):
+        if isinstance(arg, int):
+            if arg > len(self._resources):
+                raise IndexError("list index out of range")
+            else:
+                return Resource(index=arg, parent=self)
+        else:
+            results = [
+                i for i, (name, _) in enumerate(self._resources) if name == arg
+            ]
+            if len(results) == 0:
+                raise KeyError(f"'{arg}'")
+            elif len(results) > 1:
+                raise KeyError(f"Name {arg} non unique: please use index")
+            else:
+                return Resource(index=results[0], parent=self)
 
     def __iter__(self):
         return map(self.__getitem__, range(len(self)))
@@ -176,7 +193,10 @@ class Process:
 
 class Processes:
     # Maps process names to resource demands
-    _processes: MutableSequence[Tuple[ProcessName, ndarray]] = []
+    _processes: MutableSequence[Tuple[ProcessName, ndarray]]
+
+    def __init__(self) -> None:
+        self._processes = []
 
     def create(
         self, name: ProcessName, *resources: Tuple[Resource, float]
@@ -221,8 +241,22 @@ class Processes:
     def __len__(self):
         return len(self._processes)
 
-    def __getitem__(self, arg):
-        return Process(index=arg, parent=self)
+    def __getitem__(self, arg: Union[int, str]):
+        if isinstance(arg, int):
+            if arg > len(self._processes):
+                raise IndexError("list index out of range")
+            else:
+                return Process(index=arg, parent=self)
+        else:
+            results = [
+                i for i, (name, _) in enumerate(self._processes) if name == arg
+            ]
+            if len(results) == 0:
+                raise KeyError(f"'{arg}'")
+            elif len(results) > 1:
+                raise KeyError(f"Name {arg} non unique: please use index")
+            else:
+                return Process(index=results[0], parent=self)
 
     def __iter__(self):
         return map(self.__getitem__, range(len(self)))
@@ -785,10 +819,11 @@ class Measure:
                 return final_pairs
 
             process_pairs = identify_process_index_pairs(production_matrix)
+
             eq_constraints = []
             for process1_index, process2_index in process_pairs:
-                process1 = processes[process1_index]
-                process2 = processes[process2_index]
+                process1 = processes[int(process1_index)]
+                process2 = processes[int(process2_index)]
                 process1_runs = run_vector[process1_index]
                 process2_runs = run_vector[process2_index]
                 p2_over_p1 = process2_runs / process1_runs
@@ -975,11 +1010,10 @@ class Measure:
                 raise IterationLimitReached(res.nit)
             elif res.status == 2:
                 # Problem appears to be infeasible
-                print(res.con)
 
                 raise Overconstrained(
                     [
-                        (processes[i], v)
+                        (processes[int(i)], v)
                         for i, v in enumerate(res.con[: len(processes)])
                         if v != 0
                     ],
