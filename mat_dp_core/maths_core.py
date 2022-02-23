@@ -1,3 +1,4 @@
+from functools import reduce
 from itertools import starmap
 from typing import (
     List,
@@ -341,7 +342,7 @@ class Measure:
         processes: Processes,
         constraints: Sequence[Union[EqConstraint, LeConstraint]],
         objective: Optional[ProcessExpr] = None,
-        maxiter: int = None,
+        maxiter: Optional[int] = None,
     ):
         self._resources = resources
         self._processes = processes
@@ -750,9 +751,66 @@ class Measure:
         Sequence[Tuple[Process, float]],
         float,
     ]:
-        self._prepare_flow()  # TODO: Implement
+        def make_eq_constraints(
+            production_matrix: ndarray,
+            processes: Processes,
+            run_vector: ndarray,
+        ) -> List[EqConstraint]:
+            def make_eq_constraint(
+                process1: Process, process2: Process, p2_over_p1: float
+            ) -> EqConstraint:
+                """
+                Given two processes and the ratio between them make an eq_constraint.
+                """
+                return EqConstraint(
+                    f"{process1.name}_{process2.name}_1:{p2_over_p1}ratio",
+                    process1 - p2_over_p1 * process2,
+                    0,
+                )
+
+            def identify_process_index_pairs(
+                production_matrix,
+            ) -> List[Tuple[int, int]]:
+                """
+                Identify pairs of process indices that both produce the same resource
+                """
+                final_pairs = []
+                for resource in production_matrix:
+                    non_zero_elems = np.nonzero(resource)[0]
+                    if len(non_zero_elems) > 1:
+                        pairs = [
+                            (non_zero_elems[0], i) for i in non_zero_elems[1:]
+                        ]
+                        final_pairs += pairs
+                return final_pairs
+
+            process_pairs = identify_process_index_pairs(production_matrix)
+            eq_constraints = []
+            for process1_index, process2_index in process_pairs:
+                process1 = processes[process1_index]
+                process2 = processes[process2_index]
+                process1_runs = run_vector[process1_index]
+                process2_runs = run_vector[process2_index]
+                p2_over_p1 = process2_runs / process1_runs
+                eq_constraints.append(
+                    make_eq_constraint(process1, process2, p2_over_p1)
+                )
+            return eq_constraints
+
+        self._prepare_flow()
         assert self._flow_matrix is not None
+        assert self._process_demands is not None
         if self._cumulative_resource_matrix is None:
+            objective: ProcessExpr = reduce(
+                lambda x, y: x + y,
+                [process * 1 for process in self._processes],
+            )
+            production_matrix = np.where(
+                self._process_demands > 0, self._process_demands, 0
+            )
+            eq_cons = make_eq_constraints(
+                production_matrix, self._processes, self._run_vector
+            )
             process_process_matrix = np.array(
                 [
                     self._solve(
@@ -760,23 +818,22 @@ class Measure:
                         self._processes,
                         constraints=[
                             EqConstraint(
-                                "{process.name}_no_runs",
+                                f"{process.name}_no_runs",
                                 process,
                                 self._run_vector[process.index],
                             )
-                        ],
-                        objective=None,
+                        ]
+                        + eq_cons,
+                        objective=objective,
                         maxiter=None,
                     )
                     for process in self._processes
-                ]
+                ],
+                dtype=float,
             )
-            assert self._process_demands is not None
-            production = np.where(
-                self._process_demands > 0, self._process_demands, 0
-            )
+
             self._cumulative_resource_matrix = np.einsum(
-                "ij, kj -> ki", process_process_matrix, production
+                "ij, kj -> ki", process_process_matrix, production_matrix
             )
 
         if arg1 is None and arg2 is None:
