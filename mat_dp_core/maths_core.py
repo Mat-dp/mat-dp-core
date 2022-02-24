@@ -415,7 +415,11 @@ class Measure:
         self._resources = resources
         self._processes = processes
         self._run_vector = self._solve(
-            resources, processes, constraints, objective, maxiter
+            resources=resources,
+            processes=processes,
+            constraints=constraints,
+            objective=objective,
+            maxiter=maxiter,
         )
         self._resource_matrix = None
         self._flow_matrix = None
@@ -940,9 +944,9 @@ class Measure:
         self,
         resources: Resources,
         processes: Processes,
-        constraints: Sequence[Union[EqConstraint, LeConstraint]],
-        objective: Optional[ProcessExpr],
-        maxiter: Optional[int],
+        constraints: Sequence[Union[EqConstraint, LeConstraint]] = [],
+        objective: Optional[ProcessExpr] = None,
+        maxiter: Optional[int] = None,
     ):
         """
         Given a system of processes, resources, and constraints, and an optional
@@ -954,6 +958,19 @@ class Measure:
             *constraints* reference only processes in *processes*
             *processes* reference only resources in *resources*
         """
+
+        def constraints_to_array(
+            constraints: List[_Constraint],
+        ) -> Tuple[ndarray, ndarray]:
+            A_constraint_array = np.zeros((len(constraints), len(processes)))
+            b_constraint_array = np.zeros((len(constraints)))
+
+            for i, constraint in enumerate(constraints):
+                constraint.array.resize(len(processes), refcheck=False)
+                A_constraint_array[i] = constraint.array
+                b_constraint_array[i] = constraint.bound
+
+            return A_constraint_array, b_constraint_array
 
         if len(resources) == 0 and len(processes) == 0:
             raise ValueError("No resources or processes created")
@@ -968,172 +985,101 @@ class Measure:
         # Pad arrays out to the correct size:
         # The processes weren't necessarily aware of the total number of
         # resources at the time they were created
+
         A_proc = np.transpose(
             np.array([process.array for process in processes])
         )
         b_proc = np.zeros(len(resources))
 
-        # Add constraints for each specified constraint
+        eq_constraints = [
+            constraint
+            for constraint in constraints
+            if isinstance(constraint, EqConstraint)
+        ]
+        le_constraints = [
+            constraint
+            for constraint in constraints
+            if isinstance(constraint, LeConstraint)
+        ]
 
-        A_eq_con_list = []
-        b_eq_con_list = []
-        A_le_con_list = []
-        b_le_con_list = []
-        eq_constraints = []
-        le_constraints = []
-        for constraint in constraints:
-            constraint.array.resize(len(processes))
-            if isinstance(constraint, EqConstraint):
-                eq_constraints.append(constraint)
-                A_eq_con_list.append(constraint.array)
-                b_eq_con_list.append(constraint.bound)
-            elif isinstance(constraint, LeConstraint):
-                le_constraints.append(constraint)
-                A_le_con_list.append(constraint.array)
-                b_le_con_list.append(constraint.bound)
-            else:
-                assert False
+        A_eq_con, b_eq_con = constraints_to_array(list(eq_constraints))
+        A_le_con, b_le_con = constraints_to_array(list(le_constraints))
 
-        A_eq_con = (
-            np.array(A_eq_con_list, dtype=float)
-            if len(A_eq_con_list) > 0
-            else None
-        )
-        b_eq_con = (
-            np.array(b_eq_con_list, dtype=float)
-            if len(b_eq_con_list) > 0
-            else None
-        )
-        A_le_con = (
-            np.array(A_le_con_list, dtype=float)
-            if len(A_le_con_list) > 0
-            else None
-        )
-        b_le_con = (
-            np.array(b_le_con_list, dtype=float)
-            if len(b_le_con_list) > 0
-            else None
-        )
-
-        if A_eq_con is None:
-            A_eq = A_proc
-        else:
-            A_eq = np.concatenate((A_proc, A_eq_con))
-        if b_eq_con is None:
-            b_eq = b_proc
-        else:
-            b_eq = np.concatenate((b_proc, b_eq_con))
+        A_eq = np.concatenate((A_proc, A_eq_con))
+        b_eq = np.concatenate((b_proc, b_eq_con))
 
         if objective is None:
-            if len(b_le_con_list) != 0:
-                raise ValueError(
-                    "Le constraints not allowed for objective is None case"
-                )
-            try:
-                return linalg.solve(
-                    a=A_eq,
-                    b=b_eq,
-                )
-            except linalg.LinAlgError:
-                # Determine whether the solution was under- or overconstrained
-                # https://towardsdatascience.com/how-do-you-use-numpy-scipy-and-sympy-to-solve-systems-of-linear-equations-9afed2c388af
-                augmented_A = Matrix(
-                    [
-                        A + [b]
-                        for A, b in zip(
-                            A_eq_con if A_eq_con is not None else [],
-                            b_eq_con if b_eq_con is not None else [],
-                        )
-                    ]
-                    + [
-                        A + [b]
-                        for A, b in zip(
-                            A_le_con if A_le_con is not None else [],
-                            b_le_con if b_le_con is not None else [],
-                        )
-                    ]
-                )
-                rref = augmented_A.rref()
-                if len(rref[1]) < len(rref[0]):
-                    # Final row of RREF is zero if underconstrained
-                    # TODO: calculate how the system is ill-specified by inspecting
-                    # the matrix in RREF
-                    raise Underconstrained()
-                else:
-                    raise Overconstrained([], [], [])
-        else:
-            # Build objective vector
-            coefficients = pack_constraint(objective)
-            coefficients.resize(len(processes))
-            # Solve
-            # TODO: optimise with callback
-            # TODO: optimise method
-
-            options = {}
-            if maxiter is not None:
-                options["maxiter"] = maxiter
-
-            res = linprog(
-                c=coefficients,
-                A_ub=A_le_con,
-                b_ub=b_le_con,
-                A_eq=A_eq,
-                b_eq=b_eq,
-                options=options,
+            objective = reduce(
+                lambda x, y: x + y,
+                [process * 1 for process in self._processes],
             )
 
-            if res.status == 0:
-                # Optimization terminated successfully
-                return res.x
-            elif res.status == 1:
-                # Iteration limit reached
-                raise IterationLimitReached(res.nit)
-            elif res.status == 2:
-                # Problem appears to be infeasible
-                # assert res.con == []
-                res_constraints = []
+        # Build objective vector
+        coefficients = pack_constraint(objective)
+        coefficients.resize(len(processes))
+        # Solve
+        # TODO: optimise with callback
+        # TODO: optimise method
 
-                for i, v in enumerate(res.con[: len(resources)]):
-                    if v != 0:
-                        prod_con = A_eq[int(i)]
-                        producers_i = np.nonzero(
-                            np.where(prod_con > 0, prod_con, 0)
-                        )
-                        consumers_i = np.nonzero(
-                            np.where(prod_con < 0, prod_con, 0)
-                        )
-                        producers = (
-                            [processes[int(v)] for v in producers_i]
-                            if len(producers_i) > 0
-                            else []
-                        )
-                        consumers = (
-                            [processes[int(v)] for v in consumers_i]
-                            if len(consumers_i) > 0
-                            else []
-                        )
-                        res_constraints.append(
-                            (resources[int(i)], -v, producers, consumers)
-                        )
+        options = {}
+        if maxiter is not None:
+            options["maxiter"] = maxiter
 
-                raise Overconstrained(
-                    res_constraints,
-                    [
-                        (eq_constraints[i], v)
-                        for i, v in enumerate(res.con[len(resources) :])
-                        if v != 0
-                    ],
-                    [
-                        (le_constraints[i], v)
-                        for i, v in enumerate(res.slack)
-                        if v < 0
-                    ],
-                )  # TODO: sort out typing warning
-            elif res.status == 3:
-                # Problem appears to be unbounded
-                raise UnboundedSolution
-            elif res.status == 4:
-                # Numerical difficulties encountered
-                raise NumericalDifficulties
-            else:
-                assert False
+        res = linprog(
+            c=coefficients,
+            A_ub=A_le_con,
+            b_ub=b_le_con,
+            A_eq=A_eq,
+            b_eq=b_eq,
+            options=options,
+        )
+
+        if res.status == 0:  # Optimization terminated successfully
+            return res.x
+        elif res.status == 1:  # Iteration limit reached
+            raise IterationLimitReached(res.nit)
+        elif res.status == 2:  # Problem appears to be infeasible
+            res_constraints = []
+
+            for i, v in enumerate(res.con[: len(resources)]):
+                if v != 0:
+                    prod_con = A_eq[int(i)]
+                    producers_i = np.nonzero(
+                        np.where(prod_con > 0, prod_con, 0)
+                    )
+                    consumers_i = np.nonzero(
+                        np.where(prod_con < 0, prod_con, 0)
+                    )
+                    producers = (
+                        [processes[int(v)] for v in producers_i]
+                        if len(producers_i) > 0
+                        else []
+                    )
+                    consumers = (
+                        [processes[int(v)] for v in consumers_i]
+                        if len(consumers_i) > 0
+                        else []
+                    )
+                    res_constraints.append(
+                        (resources[int(i)], -v, producers, consumers)
+                    )
+
+            raise Overconstrained(
+                res_constraints,
+                [
+                    (eq_constraints[i], v)
+                    for i, v in enumerate(res.con[len(resources) :])
+                    if v != 0
+                ],
+                [
+                    (le_constraints[i], v)
+                    for i, v in enumerate(res.slack)
+                    if v < 0
+                ],
+            )
+        elif res.status == 3:  # Problem appears to be unbounded
+            raise UnboundedSolution
+        elif res.status == 4:  # Numerical difficulties encountered
+            raise NumericalDifficulties
+        else:
+            assert False
