@@ -395,11 +395,8 @@ class NumericalDifficulties(Exception):
 class Measure:
     _resources: Resources
     _processes: Processes
-    _run_vector: ndarray  # cols: processes
-    _process_demands: Optional[
-        ndarray
-    ]  # cols: processes, rows: resources (resources, processes)
-
+    _run_vector: ndarray  # processes
+    _process_produces: ndarray  # (resources, processes)
     _resource_matrix: Optional[ndarray]  # (resource, process)
     _flow_matrix: Optional[ndarray]  # (resource, process, process)
     _cumulative_resource_matrix: Optional[ndarray]  # (resource, process)
@@ -412,8 +409,16 @@ class Measure:
         objective: Optional[ProcessExpr] = None,
         maxiter: Optional[int] = None,
     ):
+        for process in processes:
+            process.array.resize(len(resources), refcheck=False)
+        # Pad arrays out to the correct size:
+        # The processes weren't necessarily aware of the total number of
+        # resources at the time they were created
         self._resources = resources
         self._processes = processes
+        self._process_produces = np.transpose(
+            np.array([process.array for process in processes])
+        )
         self._run_vector = self._solve(
             resources=resources,
             processes=processes,
@@ -424,7 +429,6 @@ class Measure:
         self._resource_matrix = None
         self._flow_matrix = None
         self._cumulative_resource_matrix = None
-        self._process_demands = None
 
     @overload
     def run(self) -> Sequence[Tuple[Process, float]]:
@@ -487,17 +491,13 @@ class Measure:
         Sequence[Tuple[Process, float]],
         float,
     ]:
-        if self._process_demands is None:
-            self._process_demands = np.transpose(
-                np.array([process.array for process in self._processes])
-            )
         if self._resource_matrix is None:
             self._resource_matrix = (
                 np.full(
                     (len(self._resources), len(self._processes)),
                     self._run_vector,
                 )
-                * self._process_demands
+                * self._process_produces
             )
         if arg1 is None and arg2 is None:
             output = []
@@ -528,17 +528,13 @@ class Measure:
             assert False
 
     def _prepare_flow(self):
-        if self._process_demands is None:
-            self._process_demands = np.transpose(
-                np.array([process.array for process in self._processes])
-            )
         if self._resource_matrix is None:
             self._resource_matrix = (
                 np.full(
                     (len(self._resources), len(self._processes)),
                     self._run_vector,
                 )
-                * self._process_demands
+                * self._process_produces
             )
         if self._flow_matrix is None:
             total_res_produced_vector = np.sum(
@@ -872,14 +868,13 @@ class Measure:
 
         self._prepare_flow()
         assert self._flow_matrix is not None
-        assert self._process_demands is not None
         if self._cumulative_resource_matrix is None:
             objective: ProcessExpr = reduce(
                 lambda x, y: x + y,
                 [process * 1 for process in self._processes],
             )
             production_matrix = np.where(
-                self._process_demands > 0, self._process_demands, 0
+                self._process_produces > 0, self._process_produces, 0
             )
             eq_cons = make_eq_constraints(
                 production_matrix, self._processes, self._run_vector
@@ -979,18 +974,6 @@ class Measure:
         elif len(processes) == 0:
             raise ValueError("No processes created")
 
-        # Add constraints for each process
-        for process in processes:
-            process.array.resize(len(resources), refcheck=False)
-        # Pad arrays out to the correct size:
-        # The processes weren't necessarily aware of the total number of
-        # resources at the time they were created
-
-        A_proc = np.transpose(
-            np.array([process.array for process in processes])
-        )
-        b_proc = np.zeros(len(resources))
-
         eq_constraints = [
             constraint
             for constraint in constraints
@@ -1005,8 +988,8 @@ class Measure:
         A_eq_con, b_eq_con = constraints_to_array(list(eq_constraints))
         A_le_con, b_le_con = constraints_to_array(list(le_constraints))
 
-        A_eq = np.concatenate((A_proc, A_eq_con))
-        b_eq = np.concatenate((b_proc, b_eq_con))
+        A_eq = np.concatenate((self._process_produces, A_eq_con))
+        b_eq = np.concatenate((np.zeros(len(resources)), b_eq_con))
 
         if objective is None:
             objective = reduce(
