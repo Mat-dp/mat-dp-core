@@ -2,6 +2,9 @@ from typing import Optional
 
 from mat_dp_core.maths_core import (
     EqConstraint,
+    GeConstraint,
+    LeConstraint,
+    Measure,
     Process,
     Processes,
     Resource,

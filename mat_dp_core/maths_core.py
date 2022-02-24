@@ -328,22 +328,56 @@ class IterationLimitReached(Exception):
 class Overconstrained(Exception):
     def __init__(
         self,
-        proc_constraints: Sequence[Tuple[Process, float]],
+        rec_constraints: Sequence[
+            Tuple[Resource, float, List[Process], List[Process]]
+        ],
         eq_constraints: Sequence[Tuple[EqConstraint, float]],
         le_constraints: Sequence[Tuple[LeConstraint, float]],
     ):
-        self.proc_constraints = proc_constraints
+        def constraints_to_rec_string(
+            constraints: Sequence[
+                Tuple[Resource, float, List[Process], List[Process]]
+            ]
+        ) -> str:
+            rec_strings = []
+            for (constraint, val, producers, consumers) in constraints:
+                producer_names = ", ".join([p.name for p in producers])
+                consumer_names = ", ".join([p.name for p in consumers])
+                if val < 0:
+                    format_str = f"Increase runs of {producer_names} or decrease runs of {consumer_names}"
+                elif val > 0:
+                    format_str = f"Increase runs of {consumer_names} or decrease runs of {producer_names}"
+                else:
+                    format_str = None
+                if format_str is not None:
+                    full_string = (
+                        f"{constraint} => {val}: "
+                        + format_str.format(constraint.name)
+                    )
+                    rec_strings.append(full_string)
+            return "\n".join(rec_strings)
+
+        self.rec_constraints = rec_constraints
         self.eq_constraints = eq_constraints
         self.le_constraints = le_constraints
         # TODO Fix residual val being non-zero
-        super().__init__(
-            "Overconstrained problem:\nprocesses:\n"
-            + "\n".join([f"{c} => {val}" for (c, val) in proc_constraints])
-            + "\neq_constraints:\n"
-            + "\n".join([f"{c} => {val}" for (c, val) in eq_constraints])
-            + "\nle_constraints:\n"
-            + "\n".join([f"{c} => {val}" for (c, val) in le_constraints])
-        )
+        message_list = ["Overconstrained problem:"]
+        if len(rec_constraints) > 0:
+            message_list += [
+                "resources:",
+                constraints_to_rec_string(rec_constraints),
+            ]
+        if len(eq_constraints) > 0:
+            message_list += [
+                "eq_constraints:",
+                "\n".join([f"{c} => {val}" for (c, val) in eq_constraints]),
+            ]
+        if len(le_constraints) > 0:
+            message_list += "le_constraints:", "\n".join(
+                [f"{c} => {val}" for (c, val) in le_constraints]
+            )
+
+        super().__init__("\n".join(message_list))
 
 
 class Underconstrained(Exception):
@@ -920,6 +954,14 @@ class Measure:
             *constraints* reference only processes in *processes*
             *processes* reference only resources in *resources*
         """
+
+        if len(resources) == 0 and len(processes) == 0:
+            raise ValueError("No resources or processes created")
+        elif len(resources) == 0:
+            raise ValueError("No resources created")
+        elif len(processes) == 0:
+            raise ValueError("No processes created")
+
         # Add constraints for each process
         for process in processes:
             process.array.resize(len(resources), refcheck=False)
@@ -951,10 +993,36 @@ class Measure:
                 b_le_con_list.append(constraint.bound)
             else:
                 assert False
-        A_eq_con = np.array(A_eq_con_list, dtype=float)
-        b_eq_con = np.array(b_eq_con_list, dtype=float)
-        A_le_con = np.array(A_le_con_list, dtype=float)
-        b_le_con = np.array(b_le_con_list, dtype=float)
+
+        A_eq_con = (
+            np.array(A_eq_con_list, dtype=float)
+            if len(A_eq_con_list) > 0
+            else None
+        )
+        b_eq_con = (
+            np.array(b_eq_con_list, dtype=float)
+            if len(b_eq_con_list) > 0
+            else None
+        )
+        A_le_con = (
+            np.array(A_le_con_list, dtype=float)
+            if len(A_le_con_list) > 0
+            else None
+        )
+        b_le_con = (
+            np.array(b_le_con_list, dtype=float)
+            if len(b_le_con_list) > 0
+            else None
+        )
+
+        if A_eq_con is None:
+            A_eq = A_proc
+        else:
+            A_eq = np.concatenate((A_proc, A_eq_con))
+        if b_eq_con is None:
+            b_eq = b_proc
+        else:
+            b_eq = np.concatenate((b_proc, b_eq_con))
 
         if objective is None:
             if len(b_le_con_list) != 0:
@@ -963,15 +1031,27 @@ class Measure:
                 )
             try:
                 return linalg.solve(
-                    a=np.concatenate((A_proc, A_eq_con)),
-                    b=np.concatenate((b_proc, b_eq_con)),
+                    a=A_eq,
+                    b=b_eq,
                 )
             except linalg.LinAlgError:
                 # Determine whether the solution was under- or overconstrained
                 # https://towardsdatascience.com/how-do-you-use-numpy-scipy-and-sympy-to-solve-systems-of-linear-equations-9afed2c388af
                 augmented_A = Matrix(
-                    [A + [b] for A, b in zip(A_eq_con, b_eq_con)]
-                    + [A + [b] for A, b in zip(A_le_con, b_le_con)]
+                    [
+                        A + [b]
+                        for A, b in zip(
+                            A_eq_con if A_eq_con is not None else [],
+                            b_eq_con if b_eq_con is not None else [],
+                        )
+                    ]
+                    + [
+                        A + [b]
+                        for A, b in zip(
+                            A_le_con if A_le_con is not None else [],
+                            b_le_con if b_le_con is not None else [],
+                        )
+                    ]
                 )
                 rref = augmented_A.rref()
                 if len(rref[1]) < len(rref[0]):
@@ -995,10 +1075,10 @@ class Measure:
 
             res = linprog(
                 c=coefficients,
-                A_ub=A_le_con if len(A_le_con) > 0 else None,
-                b_ub=b_le_con if len(b_le_con) > 0 else None,
-                A_eq=np.concatenate((A_proc, A_eq_con)),
-                b_eq=np.concatenate((b_proc, b_eq_con)),
+                A_ub=A_le_con,
+                b_ub=b_le_con,
+                A_eq=A_eq,
+                b_eq=b_eq,
                 options=options,
             )
 
@@ -1010,16 +1090,37 @@ class Measure:
                 raise IterationLimitReached(res.nit)
             elif res.status == 2:
                 # Problem appears to be infeasible
+                # assert res.con == []
+                res_constraints = []
+
+                for i, v in enumerate(res.con[: len(resources)]):
+                    if v != 0:
+                        prod_con = A_eq[int(i)]
+                        producers_i = np.nonzero(
+                            np.where(prod_con > 0, prod_con, 0)
+                        )
+                        consumers_i = np.nonzero(
+                            np.where(prod_con < 0, prod_con, 0)
+                        )
+                        producers = (
+                            [processes[int(v)] for v in producers_i]
+                            if len(producers_i) > 0
+                            else []
+                        )
+                        consumers = (
+                            [processes[int(v)] for v in consumers_i]
+                            if len(consumers_i) > 0
+                            else []
+                        )
+                        res_constraints.append(
+                            (resources[int(i)], -v, producers, consumers)
+                        )
 
                 raise Overconstrained(
-                    [
-                        (processes[int(i)], v)
-                        for i, v in enumerate(res.con[: len(processes)])
-                        if v != 0
-                    ],
+                    res_constraints,
                     [
                         (eq_constraints[i], v)
-                        for i, v in enumerate(res.con[len(processes) :])
+                        for i, v in enumerate(res.con[len(resources) :])
                         if v != 0
                     ],
                     [
