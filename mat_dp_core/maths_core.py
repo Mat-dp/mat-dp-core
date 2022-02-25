@@ -1,3 +1,4 @@
+import warnings
 from functools import reduce
 from itertools import starmap
 from typing import (
@@ -1008,12 +1009,34 @@ class Measure:
         if maxiter is not None:
             options["maxiter"] = maxiter
 
+        def get_row_scales(A_mat: ndarray, b_vec: ndarray):
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", "divide by zero encountered in log10"
+                )
+                b_scales = np.nan_to_num(
+                    np.power(10, np.floor(np.log10(b_vec)))
+                )
+                A_maxima = np.max(A_mat, axis=1)
+                A_scales = np.nan_to_num(
+                    np.power(10, np.floor(np.log10(A_maxima)))
+                )
+            scales = np.maximum(A_scales, b_scales)
+            return np.nan_to_num(np.reciprocal(scales))
+
+        eq_scales = get_row_scales(A_eq, b_eq)
+        le_scales = get_row_scales(A_le_con, b_le_con)
+        red_A_eq = np.einsum("ij, i -> ij", A_eq, eq_scales)
+        red_b_eq = np.einsum("i, i -> i", b_eq, eq_scales)
+        red_A_ub = np.einsum("ij, i -> ij", A_le_con, le_scales)
+        red_b_ub = np.einsum("i, i -> i", b_le_con, le_scales)
+
         res = linprog(
             c=coefficients,
-            A_ub=A_le_con,
-            b_ub=b_le_con,
-            A_eq=A_eq,
-            b_eq=b_eq,
+            A_ub=red_A_ub,
+            b_ub=red_b_ub,
+            A_eq=red_A_eq,
+            b_eq=red_b_eq,
             options=options,
         )
 
