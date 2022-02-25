@@ -1046,8 +1046,13 @@ class Measure:
             raise IterationLimitReached(res.nit)
         elif res.status == 2:  # Problem appears to be infeasible
             res_constraints = []
-
-            for i, v in enumerate(res.con[: len(resources)]):
+            rescaled_con = np.einsum(
+                "i, i -> i", res.con, np.nan_to_num(np.reciprocal(eq_scales))
+            )
+            rescaled_slack = np.einsum(
+                "i, i -> i", res.slack, np.nan_to_num(np.reciprocal(le_scales))
+            )
+            for i, v in enumerate(rescaled_con[: len(resources)]):
                 if v != 0:
                     prod_con = A_eq[int(i)]
                     producers_i = np.nonzero(
@@ -1074,12 +1079,12 @@ class Measure:
                 res_constraints,
                 [
                     (eq_constraints[i], v)
-                    for i, v in enumerate(res.con[len(resources) :])
+                    for i, v in enumerate(rescaled_con[len(resources) :])
                     if v != 0
                 ],
                 [
                     (le_constraints[i], v)
-                    for i, v in enumerate(res.slack)
+                    for i, v in enumerate(rescaled_slack)
                     if v < 0
                 ],
             )
