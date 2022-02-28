@@ -12,7 +12,10 @@ mkdocs = "^1.2.3"
 mkdocs-material = "^8.1.7"
 
 [tool.poetry.dev-dependencies]
-pytest = "^5.2"
+pytest = "^6.0"
+pytest-asyncio = "^0.14.0"
+pytest-xdist = "^2.2.1"
+pytest-cov = "^2.11.1"
 black = "^21.9b0"
 isort = "^5.9.3"
 pre-commit = "^2.15.0"
@@ -28,3 +31,7 @@ line_length = 79
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pyright]
+venvPath="./"
+venv=".venv"
