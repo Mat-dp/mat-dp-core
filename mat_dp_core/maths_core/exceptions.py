@@ -1,8 +1,10 @@
 from typing import List, Sequence, Tuple
 
+import numpy as np
+
 from .constraints import EqConstraint, LeConstraint
-from .processes import Process
-from .resources import Resource
+from .processes import Process, Processes
+from .resources import Resource, Resources
 
 
 class IterationLimitReached(Exception):
@@ -64,6 +66,52 @@ class Overconstrained(Exception):
             )
 
         super().__init__("\n".join(message_list))
+
+    @classmethod
+    def from_vector(
+        cls,
+        con_vector: np.ndarray,
+        slack_vector: np.ndarray,
+        solver_matrix: np.ndarray,
+        processes: Processes,
+        resources: Resources,
+        eq_constraints: List[EqConstraint],
+        le_constraints: List[LeConstraint],
+    ):
+        # TODO Get rid of dependency on solver_matrix
+        res_constraints = []
+        for i, v in enumerate(con_vector[: len(resources)]):
+            if v != 0:
+                prod_con = solver_matrix[int(i)]
+                producers_i = np.nonzero(np.where(prod_con > 0, prod_con, 0))
+                consumers_i = np.nonzero(np.where(prod_con < 0, prod_con, 0))
+                producers = (
+                    [processes[int(v)] for v in producers_i]
+                    if len(producers_i) > 0
+                    else []
+                )
+                consumers = (
+                    [processes[int(v)] for v in consumers_i]
+                    if len(consumers_i) > 0
+                    else []
+                )
+                res_constraints.append(
+                    (resources[int(i)], -v, producers, consumers)
+                )
+
+        return cls(
+            res_constraints,
+            [
+                (eq_constraints[i], v)
+                for i, v in enumerate(con_vector[len(resources) :])
+                if v != 0
+            ],
+            [
+                (le_constraints[i], v)
+                for i, v in enumerate(slack_vector)
+                if v < 0
+            ],
+        )
 
 
 class UnboundedSolution(Exception):

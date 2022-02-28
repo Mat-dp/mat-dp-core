@@ -1,4 +1,3 @@
-import warnings
 from functools import reduce
 from typing import List, Optional, Sequence, Tuple, Union, overload
 
@@ -21,6 +20,7 @@ from .exceptions import (
 )
 from .processes import Process, Processes, ProcessExpr
 from .resources import Resource, Resources
+from .tools import get_order_ranges, get_row_scales
 
 
 class Measure:
@@ -644,37 +644,6 @@ class Measure:
         if maxiter is not None:
             options["maxiter"] = maxiter
 
-        def get_row_scales(equations: ndarray):
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore", "divide by zero encountered in log10"
-                )
-
-                A_maxima = np.max(np.absolute(equations), axis=1)
-                scales = np.nan_to_num(
-                    np.power(10, np.floor(np.log10(np.absolute(A_maxima))))
-                )
-            return np.nan_to_num(np.reciprocal(scales))
-
-        def get_order_ranges(equations: ndarray) -> ndarray:
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore", "divide by zero encountered in log10"
-                )
-                mags = np.log10(np.absolute(equations))
-            order_ranges = []
-            for res in mags:
-                new_res_list = []
-                for i in res:
-                    if i != -np.inf:
-                        new_res_list.append(i)
-                if len(new_res_list) > 0:
-                    order_range = np.ptp(new_res_list)
-                else:
-                    order_range = 0
-                order_ranges.append(order_range)
-            return np.array(order_ranges)
-
         eq_equations = np.concatenate(
             (A_eq, np.resize(b_eq, (len(b_eq), 1))), axis=1
         )
@@ -769,49 +738,22 @@ class Measure:
         elif res.status == 1:  # Iteration limit reached
             raise IterationLimitReached(res.nit)
         elif res.status == 2:  # Problem appears to be infeasible
-            res_constraints = []
             rescaled_con = np.einsum(
                 "i, i -> i", res.con, np.nan_to_num(np.reciprocal(eq_scales))
             )
             rescaled_slack = np.einsum(
                 "i, i -> i", res.slack, np.nan_to_num(np.reciprocal(le_scales))
             )
-            for i, v in enumerate(rescaled_con[: len(resources)]):
-                if v != 0:
-                    prod_con = A_eq[int(i)]
-                    producers_i = np.nonzero(
-                        np.where(prod_con > 0, prod_con, 0)
-                    )
-                    consumers_i = np.nonzero(
-                        np.where(prod_con < 0, prod_con, 0)
-                    )
-                    producers = (
-                        [processes[int(v)] for v in producers_i]
-                        if len(producers_i) > 0
-                        else []
-                    )
-                    consumers = (
-                        [processes[int(v)] for v in consumers_i]
-                        if len(consumers_i) > 0
-                        else []
-                    )
-                    res_constraints.append(
-                        (resources[int(i)], -v, producers, consumers)
-                    )
-
-            raise Overconstrained(
-                res_constraints,
-                [
-                    (eq_constraints[i], v)
-                    for i, v in enumerate(rescaled_con[len(resources) :])
-                    if v != 0
-                ],
-                [
-                    (le_constraints[i], v)
-                    for i, v in enumerate(rescaled_slack)
-                    if v < 0
-                ],
+            raise Overconstrained.from_vector(
+                con_vector=rescaled_con,
+                slack_vector=rescaled_slack,
+                solver_matrix=A_eq,
+                processes=processes,
+                resources=resources,
+                eq_constraints=eq_constraints,
+                le_constraints=le_constraints,
             )
+
         elif res.status == 3:  # Problem appears to be unbounded
             process_sols = [
                 (process, res.x[process.index]) for process in processes
