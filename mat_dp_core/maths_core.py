@@ -14,9 +14,7 @@ from typing import (
 
 import numpy as np
 from numpy import ndarray
-from scipy import linalg
 from scipy.optimize import linprog
-from sympy import Matrix
 
 ResourceName = str
 Unit = str
@@ -1070,7 +1068,7 @@ class Measure:
 
         # Build objective vector
         coefficients = pack_constraint(objective)
-        coefficients.resize(len(processes))
+        coefficients.resize(len(processes), refcheck=False)
         # Solve
         # TODO: optimise with callback
         # TODO: optimise method
