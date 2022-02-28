@@ -411,6 +411,53 @@ class NumericalDifficulties(Exception):
     pass
 
 
+class InconsistentOrderOfMagnitude(Exception):
+    def __init__(
+        self,
+        resources: List[Tuple[Resource, List[Tuple[Process, float]], float]],
+        eq_constraints: List[
+            Tuple[EqConstraint, List[Tuple[Process, float]], float]
+        ],
+        le_constraints: List[
+            Tuple[LeConstraint, List[Tuple[Process, float]], float]
+        ],
+    ) -> None:
+        message_list = [
+            "\nAll resources and constraints must be of a \nconsistent order of magnitude. If you wish to allow this \nbehaviour use 'allow_inconsistent_order_of_mag'.\n"
+        ]
+        if len(resources) > 0:
+            message_list.append("Resource inconsistencies")
+            for resource, process_list, order_range in resources:
+                message_list.append(
+                    f"{resource}: Order of mag range: {order_range}"
+                )
+                for process, process_demand in process_list:
+                    message_list.append(f"{process}: {process_demand}")
+                message_list.append("\n")
+            message_list.append("\n")
+
+        if len(eq_constraints) > 0:
+            message_list.append("Eq Constraint inconsistencies")
+            for eq_constraint, process_list, order_range in resources:
+                message_list.append(
+                    f"{eq_constraint}: Order of mag range - {order_range}"
+                )
+                for process, process_demand in process_list:
+                    message_list.append(f"{process}: {process_demand}")
+                message_list.append("\n")
+
+        if len(le_constraints) > 0:
+            message_list.append("Le Constraint inconsistencies")
+            for le_constraint, process_list, order_range in resources:
+                message_list.append(
+                    f"{le_constraint}: Order of mag range - {order_range}"
+                )
+                for process, process_demand in process_list:
+                    message_list.append(f"{process}: {process_demand}")
+                message_list.append("\n")
+        super().__init__("\n".join(message_list))
+
+
 class Measure:
     _resources: Resources
     _processes: Processes
@@ -427,6 +474,7 @@ class Measure:
         constraints: Sequence[Union[EqConstraint, LeConstraint]],
         objective: Optional[ProcessExpr] = None,
         maxiter: Optional[int] = None,
+        allow_inconsistent_order_of_mag: bool = False,
     ):
         for process in processes:
             process.array.resize(len(resources), refcheck=False)
@@ -438,12 +486,14 @@ class Measure:
         self._process_produces = np.transpose(
             np.array([process.array for process in processes])
         )
+        self._allow_inconsistent_order_of_mag = allow_inconsistent_order_of_mag
         self._run_vector = self._solve(
             resources=resources,
             processes=processes,
             constraints=constraints,
             objective=objective,
             maxiter=maxiter,
+            allow_inconsistent_order_of_mag=self._allow_inconsistent_order_of_mag,
         )
         self._resource_matrix = None
         self._flow_matrix = None
@@ -913,6 +963,7 @@ class Measure:
                         + eq_cons,
                         objective=objective,
                         maxiter=None,
+                        allow_inconsistent_order_of_mag=self._allow_inconsistent_order_of_mag,
                     )
                     for process in self._processes
                 ],
@@ -961,6 +1012,7 @@ class Measure:
         constraints: Sequence[Union[EqConstraint, LeConstraint]] = [],
         objective: Optional[ProcessExpr] = None,
         maxiter: Optional[int] = None,
+        allow_inconsistent_order_of_mag: bool = False,
     ):
         """
         Given a system of processes, resources, and constraints, and an optional
@@ -1027,23 +1079,112 @@ class Measure:
         if maxiter is not None:
             options["maxiter"] = maxiter
 
-        def get_row_scales(A_mat: ndarray, b_vec: ndarray):
+        def get_row_scales(equations: ndarray):
             with warnings.catch_warnings():
                 warnings.filterwarnings(
                     "ignore", "divide by zero encountered in log10"
                 )
-                b_scales = np.nan_to_num(
-                    np.power(10, np.floor(np.log10(b_vec)))
+
+                A_maxima = np.max(np.absolute(equations), axis=1)
+                scales = np.nan_to_num(
+                    np.power(10, np.floor(np.log10(np.absolute(A_maxima))))
                 )
-                A_maxima = np.max(A_mat, axis=1)
-                A_scales = np.nan_to_num(
-                    np.power(10, np.floor(np.log10(A_maxima)))
-                )
-            scales = np.maximum(A_scales, b_scales)
             return np.nan_to_num(np.reciprocal(scales))
 
-        eq_scales = get_row_scales(A_eq, b_eq)
-        le_scales = get_row_scales(A_le_con, b_le_con)
+        def get_order_ranges(equations: ndarray) -> ndarray:
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", "divide by zero encountered in log10"
+                )
+                mags = np.log10(np.absolute(equations))
+            order_ranges = []
+            for res in mags:
+                new_res_list = []
+                for i in res:
+                    if i != -np.inf:
+                        new_res_list.append(i)
+                if len(new_res_list) > 0:
+                    order_range = np.ptp(new_res_list)
+                else:
+                    order_range = 0
+                order_ranges.append(order_range)
+            return np.array(order_ranges)
+
+        eq_equations = np.concatenate(
+            (A_eq, np.resize(b_eq, (len(b_eq), 1))), axis=1
+        )
+        le_equations = np.concatenate(
+            (A_le_con, np.resize(b_le_con, (len(b_le_con), 1))), axis=1
+        )
+
+        if not allow_inconsistent_order_of_mag:
+            eq_order_range = get_order_ranges(eq_equations)
+            le_order_range = get_order_ranges(le_equations)
+            order_limit = 6
+            eq_order_inconsistent = (
+                len(eq_order_range) > 0
+                and np.max(eq_order_range) > order_limit
+            )
+            le_order_inconsistent = (
+                len(le_order_range) > 0
+                and np.max(le_order_range) > order_limit
+            )
+            if eq_order_inconsistent or le_order_inconsistent:
+                if eq_order_inconsistent:
+                    resource_inconsistencies = [
+                        (
+                            resources[i],
+                            [
+                                (process, A_eq[i][j])
+                                for j, process in enumerate(self._processes)
+                                if A_eq[i][j] != 0
+                            ],
+                            v,
+                        )
+                        for i, v in enumerate(eq_order_range[: len(resources)])
+                        if v > order_limit
+                    ]
+                    eq_inconsistencies = [
+                        (
+                            eq_constraints[i],
+                            [
+                                (process, A_eq[i + len(self._processes)][j])
+                                for j, process in enumerate(self._processes)
+                                if A_eq[i + len(self._processes)][j] != 0
+                            ],
+                            v,
+                        )
+                        for i, v in enumerate(eq_order_range[len(resources) :])
+                        if v > order_limit
+                    ]
+                else:
+                    resource_inconsistencies = []
+                    eq_inconsistencies = []
+                if le_order_inconsistent:
+                    le_inconsistencies = [
+                        (
+                            le_constraints[i],
+                            [
+                                (process, A_le_con[i][j])
+                                for j, process in enumerate(self._processes)
+                                if A_le_con[i][j] != 0
+                            ],
+                            v,
+                        )
+                        for i, v in enumerate(le_order_range)
+                        if v > order_limit
+                    ]
+                else:
+                    le_inconsistencies = []
+
+                raise InconsistentOrderOfMagnitude(
+                    resource_inconsistencies,
+                    eq_inconsistencies,
+                    le_inconsistencies,
+                )
+
+        eq_scales = get_row_scales(eq_equations)
+        le_scales = get_row_scales(le_equations)
         red_A_eq = np.einsum("ij, i -> ij", A_eq, eq_scales)
         red_b_eq = np.einsum("i, i -> i", b_eq, eq_scales)
         red_A_ub = np.einsum("ij, i -> ij", A_le_con, le_scales)
