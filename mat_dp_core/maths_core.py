@@ -2,6 +2,7 @@ import warnings
 from functools import reduce
 from itertools import starmap
 from typing import (
+    Any,
     List,
     MutableSequence,
     Optional,
@@ -39,6 +40,12 @@ class Resource:
 
     def __repr__(self):
         return f"<Resource: {self.name}>"
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, Resource):
+            return False
+        else:
+            return self.index == other.index and self._parent == other._parent
 
 
 class Resources:
@@ -190,6 +197,12 @@ class Process:
 
     def __sub__(self, other):
         return self + -other
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, Process):
+            return False
+        else:
+            return self.index == other.index and self._parent == other._parent
 
 
 class Processes:
@@ -381,12 +394,17 @@ class Overconstrained(Exception):
         super().__init__("\n".join(message_list))
 
 
-class Underconstrained(Exception):
-    pass
-
-
 class UnboundedSolution(Exception):
-    pass
+    def __init__(self, process_sols: List[Tuple[Process, float]]) -> None:
+        message_list = ["Solution unbounded - final solution was:"]
+        for p, sol in process_sols:
+            if sol > 10 ** 7 or sol < 10 ** -7:
+                comment = "(probably unbounded)"
+            else:
+                comment = ""
+            message_list.append(f"{p}: {sol} {comment}")
+
+        super().__init__("\n".join(message_list))
 
 
 class NumericalDifficulties(Exception):
@@ -1089,7 +1107,10 @@ class Measure:
                 ],
             )
         elif res.status == 3:  # Problem appears to be unbounded
-            raise UnboundedSolution
+            process_sols = [
+                (process, res.x[process.index]) for process in processes
+            ]
+            raise UnboundedSolution(process_sols)
         elif res.status == 4:  # Numerical difficulties encountered
             raise NumericalDifficulties
         else:
