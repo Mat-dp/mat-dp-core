@@ -8,6 +8,8 @@ from mat_dp_core import (
     Processes,
     ResourceConstraint,
     Resources,
+    RunEqConstraint,
+    RunRatioConstraint,
 )
 
 
@@ -76,18 +78,30 @@ def pizza_example() -> Tuple[Resources, Processes]:
     return resources, processes
 
 
-@pytest.fixture
-def pizza_example_measure(pizza_example) -> Measure:
+@pytest.fixture(
+    params=[True, False], ids=["raw_constraints", "higher_level_constraint"]
+)
+def pizza_example_measure(request, pizza_example) -> Measure:
     resources, processes = pizza_example
-    constraints = [
-        EqConstraint(
-            "recycled pizza box ratio",
-            processes["pizza_box_producer"]
-            - processes["recycled_pizza_box_producer"],
-            0,
-        ),
-        EqConstraint("required_energy", processes["energy_grid"], 8),
-    ]
+    if request.param:
+        constraints = [
+            EqConstraint(
+                "pizza_box_ratio",
+                processes["pizza_box_producer"]
+                - processes["recycled_pizza_box_producer"],
+                0,
+            ),
+            EqConstraint("required_energy", processes["energy_grid"], 8),
+        ]
+    else:
+        constraints = [
+            RunRatioConstraint(
+                processes["pizza_box_producer"],
+                processes["recycled_pizza_box_producer"],
+                1,
+            ),
+            RunEqConstraint(processes["energy_grid"], 8),
+        ]
     return Measure(resources, processes, constraints, objective=None)
 
 

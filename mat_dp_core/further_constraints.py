@@ -29,7 +29,7 @@ class RunRatioConstraint(EqConstraint):
     ):
         if name is None:
             name = f"fixed_ratio{process1.name}_to_{process2.name}_at_1:{p2_over_p1}"
-        super().__init__(name, process1 + process2 * p2_over_p1, 0)
+        super().__init__(name, process1 - process2 * p2_over_p1, 0)
 
 
 class ResourceConstraint(EqConstraint):
