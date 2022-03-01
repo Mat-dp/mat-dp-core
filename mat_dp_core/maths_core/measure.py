@@ -33,6 +33,102 @@ def calculate_incident_flow(
     return np.sum(column, where=column > 0)
 
 
+def extract_from_resource_process_array(
+    resource_process_array: ndarray,
+    resources: Resources,
+    processes: Processes,
+    input_args: Tuple[Optional[Union[Process, Resource]], Optional[Resource]],
+) -> Union[
+    Sequence[Tuple[Process, Resource, float]],
+    Sequence[Tuple[Resource, float]],
+    Sequence[Tuple[Process, float]],
+    float,
+]:
+    """
+    resource_process_array - a 2D input array of the form (resource, process)
+    resources - The associated resources object
+    processes - The associated processes object
+    input_args - The input args specifying the relevant resource and/or process, if any
+    """
+    arg1, arg2 = input_args
+    if arg1 is None and arg2 is None:
+        output = []
+        for p in processes:
+            for r in resources:
+                output.append(
+                    (
+                        p,
+                        r,
+                        resource_process_array[r.index][p.index],
+                    )
+                )
+        return output
+    elif isinstance(arg1, Process) and arg2 is None:
+        return list(
+            zip(
+                resources,
+                resource_process_array[:, arg1.index],
+            )
+        )
+    elif isinstance(arg1, Resource) and arg2 is None:
+        return list(
+            zip(
+                processes,
+                resource_process_array[arg1.index],
+            )
+        )
+    elif arg1 is not None and arg2 is not None:
+        return resource_process_array[arg2.index][arg1.index]
+    else:
+        assert False
+
+
+def construct_resource_matrix(
+    process_produces: ndarray, run_vector: ndarray
+) -> ndarray:
+    """
+    process_produces - A (resource, process) array describing the resources consumed
+    and produced by each process
+    run_vector - A (process) vector displaying the runs of each process
+
+    returns the resource_matrix (resource, process), the resource produced or consumed by each process
+    """
+    return (
+        np.full(
+            process_produces.shape,
+            run_vector,
+        )
+        * process_produces
+    )
+
+
+def construct_flow_matrix(resource_matrix: ndarray) -> ndarray:
+    """
+    resource_matrix - A (resource, process) array describing the resource
+    produced or consumed by each process
+
+    returns the flow_matrix (resource, process1, process2), the flow in a particular resource
+    from process1 to process2
+    """
+    total_res_produced_vector = np.sum(
+        resource_matrix, where=resource_matrix > 0, axis=1
+    )
+    produced = np.where(resource_matrix > 0, resource_matrix, 0)
+    consumed = np.where(resource_matrix < 0, resource_matrix, 0)
+    reciprocal_total_res = np.reciprocal(
+        total_res_produced_vector,
+        where=total_res_produced_vector != 0,
+        dtype=float,
+    )
+    unreflected_flow_matrix = np.einsum(
+        "i, ij, ik -> ijk", reciprocal_total_res, consumed, produced
+    )
+    return np.subtract(
+        unreflected_flow_matrix,
+        np.transpose(unreflected_flow_matrix, axes=(0, 2, 1)),
+    )
+
+
 class Measure:
     _resources: Resources
     _processes: Processes
@@ -136,73 +232,15 @@ class Measure:
         float,
     ]:
         if self._resource_matrix is None:
-            self._resource_matrix = (
-                np.full(
-                    (len(self._resources), len(self._processes)),
-                    self._run_vector,
-                )
-                * self._process_produces
+            self._resource_matrix = construct_resource_matrix(
+                self._process_produces, self._run_vector
             )
-        if arg1 is None and arg2 is None:
-            output = []
-            for p in self._processes:
-                for r in self._resources:
-                    output.append(
-                        (
-                            p,
-                            r,
-                            self._resource_matrix[r.index][p.index],
-                        )
-                    )
-            return output
-        elif isinstance(arg1, Process) and arg2 is None:
-            return list(
-                zip(
-                    self._resources,
-                    self._resource_matrix[:, arg1.index],
-                )
-            )
-        elif isinstance(arg1, Resource) and arg2 is None:
-            return list(
-                zip(self._processes, self._resource_matrix[arg1.index])
-            )
-        elif arg1 is not None and arg2 is not None:
-            return self._resource_matrix[arg2.index][arg1.index]
-        else:
-            assert False
-
-    def _prepare_flow(self):
-        if self._resource_matrix is None:
-            self._resource_matrix = (
-                np.full(
-                    (len(self._resources), len(self._processes)),
-                    self._run_vector,
-                )
-                * self._process_produces
-            )
-        if self._flow_matrix is None:
-            total_res_produced_vector = np.sum(
-                self._resource_matrix, where=self._resource_matrix > 0, axis=1
-            )
-            produced = np.where(
-                self._resource_matrix > 0, self._resource_matrix, 0
-            )
-            consumed = np.where(
-                self._resource_matrix < 0, self._resource_matrix, 0
-            )
-            reciprocal_total_res = np.reciprocal(
-                total_res_produced_vector,
-                where=total_res_produced_vector != 0,
-                dtype=float,
-            )
-            unreflected_flow_matrix = np.einsum(
-                "i, ij, ik -> ijk", reciprocal_total_res, consumed, produced
-            )
-
-            self._flow_matrix = np.subtract(
-                unreflected_flow_matrix,
-                np.transpose(unreflected_flow_matrix, axes=(0, 2, 1)),
-            )
+        return extract_from_resource_process_array(
+            self._resource_matrix,
+            self._resources,
+            self._processes,
+            (arg1, arg2),
+        )
 
     @overload
     def flow(self) -> Sequence[Tuple[Process, Process, Resource, float]]:
@@ -254,8 +292,13 @@ class Measure:
         Sequence[Tuple[Process, Process, float]],
         float,
     ]:
-        self._prepare_flow()
-        assert self._flow_matrix is not None
+        if self._resource_matrix is None:
+            self._resource_matrix = construct_resource_matrix(
+                self._process_produces, self._run_vector
+            )
+        if self._flow_matrix is None:
+            self._flow_matrix = construct_flow_matrix(self._resource_matrix)
+
         if arg1 is None and arg2 is None and arg3 is None:
             output = []
             for p1 in self._processes:
@@ -331,34 +374,32 @@ class Measure:
         self, process: Process, resource: Optional[Resource] = None
     ) -> Union[Sequence[Tuple[Resource, float]], float]:
 
-        self._prepare_flow()
-        assert self._flow_matrix is not None
+        if self._resource_matrix is None:
+            self._resource_matrix = construct_resource_matrix(
+                self._process_produces, self._run_vector
+            )
+        if self._flow_matrix is None:
+            self._flow_matrix = construct_flow_matrix(self._resource_matrix)
 
         if resource is None:
             return [
                 (
                     r,
-                    sum(
-                        [
-                            flow
-                            for flow in self._flow_matrix[
-                                r.index, process.index, :
-                            ]
-                            if flow > 0
-                        ]
+                    calculate_incident_flow(
+                        self._flow_matrix,
+                        r.index,
+                        process.index,
+                        flow_from=True,
                     ),
                 )
                 for r in self._resources
             ]
         else:
-            return sum(
-                [
-                    flow
-                    for flow in self._flow_matrix[
-                        resource.index, process.index, :
-                    ]
-                    if flow > 0
-                ]
+            return calculate_incident_flow(
+                self._flow_matrix,
+                resource.index,
+                process.index,
+                flow_from=True,
             )
 
     @overload
@@ -384,34 +425,32 @@ class Measure:
         self, process: Process, resource: Optional[Resource] = None
     ) -> Union[Sequence[Tuple[Resource, float]], float]:
 
-        self._prepare_flow()
-        assert self._flow_matrix is not None
+        if self._resource_matrix is None:
+            self._resource_matrix = construct_resource_matrix(
+                self._process_produces, self._run_vector
+            )
+        if self._flow_matrix is None:
+            self._flow_matrix = construct_flow_matrix(self._resource_matrix)
 
         if resource is None:
             return [
                 (
                     r,
-                    sum(
-                        [
-                            flow
-                            for flow in self._flow_matrix[
-                                r.index, :, process.index
-                            ]
-                            if flow > 0
-                        ]
+                    calculate_incident_flow(
+                        self._flow_matrix,
+                        r.index,
+                        process.index,
+                        flow_from=False,
                     ),
                 )
                 for r in self._resources
             ]
         else:
-            return sum(
-                [
-                    flow
-                    for flow in self._flow_matrix[
-                        resource.index, :, process.index
-                    ]
-                    if flow > 0
-                ]
+            return calculate_incident_flow(
+                self._flow_matrix,
+                resource.index,
+                process.index,
+                flow_from=False,
             )
 
     @overload
@@ -510,8 +549,6 @@ class Measure:
                 )
             return eq_constraints
 
-        self._prepare_flow()
-        assert self._flow_matrix is not None
         if self._cumulative_resource_matrix is None:
             objective: ProcessExpr = reduce(
                 lambda x, y: x + y,
@@ -548,37 +585,12 @@ class Measure:
             self._cumulative_resource_matrix = np.einsum(
                 "ij, kj -> ki", process_process_matrix, production_matrix
             )
-
-        if arg1 is None and arg2 is None:
-            output = []
-            for p in self._processes:
-                for r in self._resources:
-                    output.append(
-                        (
-                            p,
-                            r,
-                            self._cumulative_resource_matrix[r.index][p.index],
-                        )
-                    )
-            return output
-        elif isinstance(arg1, Process) and arg2 is None:
-            return list(
-                zip(
-                    self._resources,
-                    self._cumulative_resource_matrix[:, arg1.index],
-                )
-            )
-        elif isinstance(arg1, Resource) and arg2 is None:
-            return list(
-                zip(
-                    self._processes,
-                    self._cumulative_resource_matrix[arg1.index],
-                )
-            )
-        elif arg1 is not None and arg2 is not None:
-            return self._cumulative_resource_matrix[arg2.index][arg1.index]
-        else:
-            assert False
+        return extract_from_resource_process_array(
+            self._cumulative_resource_matrix,
+            self._resources,
+            self._processes,
+            (arg1, arg2),
+        )
 
     def _solve(
         self,
