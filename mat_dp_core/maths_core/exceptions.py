@@ -83,8 +83,12 @@ class Overconstrained(Exception):
         for i, v in enumerate(con_vector[: len(resources)]):
             if v != 0:
                 prod_con = solver_matrix[int(i)]
-                producers_i = np.nonzero(np.where(prod_con > 0, prod_con, 0))
-                consumers_i = np.nonzero(np.where(prod_con < 0, prod_con, 0))
+                producers_i = np.nonzero(np.where(prod_con > 0, prod_con, 0))[
+                    0
+                ]
+                consumers_i = np.nonzero(np.where(prod_con < 0, prod_con, 0))[
+                    0
+                ]
                 producers = (
                     [processes[int(v)] for v in producers_i]
                     if len(producers_i) > 0
