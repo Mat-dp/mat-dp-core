@@ -120,7 +120,6 @@ class Measure:
     _resources: Resources
     _processes: Processes
     _run_vector: ndarray  # processes
-    _process_produces: ndarray  # (resources, processes)
     _resource_matrix: Optional[ndarray]  # (resource, process)
     _flow_matrix: Optional[ndarray]  # (resource, process, process)
     _cumulative_resource_matrix: Optional[ndarray]  # (resource, process)
@@ -134,21 +133,13 @@ class Measure:
         maxiter: Optional[int] = None,
         allow_inconsistent_order_of_mag: bool = False,
     ):
-        for process in processes:
-            process.array.resize(len(resources), refcheck=False)
-        # Pad arrays out to the correct size:
-        # The processes weren't necessarily aware of the total number of
-        # resources at the time they were created
+
         self._resources = resources
         self._processes = processes
-        self._process_produces = np.transpose(
-            np.array([process.array for process in processes])
-        )
         self._allow_inconsistent_order_of_mag = allow_inconsistent_order_of_mag
         self._run_vector = solve(
             resources=resources,
             processes=processes,
-            process_produces=self._process_produces,
             constraints=constraints,
             objective=objective,
             maxiter=maxiter,
@@ -221,7 +212,7 @@ class Measure:
     ]:
         if self._resource_matrix is None:
             self._resource_matrix = construct_resource_matrix(
-                self._process_produces, self._run_vector
+                self._processes.process_produces, self._run_vector
             )
         return extract_from_resource_process_array(
             self._resource_matrix,
@@ -282,7 +273,7 @@ class Measure:
     ]:
         if self._resource_matrix is None:
             self._resource_matrix = construct_resource_matrix(
-                self._process_produces, self._run_vector
+                self._processes.process_produces, self._run_vector
             )
         if self._flow_matrix is None:
             self._flow_matrix = construct_flow_matrix(self._resource_matrix)
@@ -364,7 +355,7 @@ class Measure:
 
         if self._resource_matrix is None:
             self._resource_matrix = construct_resource_matrix(
-                self._process_produces, self._run_vector
+                self._processes.process_produces, self._run_vector
             )
         if self._flow_matrix is None:
             self._flow_matrix = construct_flow_matrix(self._resource_matrix)
@@ -415,7 +406,7 @@ class Measure:
 
         if self._resource_matrix is None:
             self._resource_matrix = construct_resource_matrix(
-                self._process_produces, self._run_vector
+                self._processes.process_produces, self._run_vector
             )
         if self._flow_matrix is None:
             self._flow_matrix = construct_flow_matrix(self._resource_matrix)
@@ -543,7 +534,9 @@ class Measure:
                 [process * 1 for process in self._processes],
             )
             production_matrix = np.where(
-                self._process_produces > 0, self._process_produces, 0
+                self._processes.process_produces > 0,
+                self._processes.process_produces,
+                0,
             )
             eq_cons = make_eq_constraints(
                 production_matrix, self._processes, self._run_vector
@@ -553,7 +546,6 @@ class Measure:
                     solve(
                         self._resources,
                         self._processes,
-                        self._process_produces,
                         constraints=[
                             EqConstraint(
                                 f"{process.name}_no_runs",

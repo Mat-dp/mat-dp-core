@@ -26,7 +26,6 @@ from .tools import get_order_ranges, get_row_scales
 def solve(
     resources: Resources,
     processes: Processes,
-    process_produces: ndarray,
     constraints: Sequence[Union[EqConstraint, LeConstraint]] = [],
     objective: Optional[ProcessExpr] = None,
     maxiter: Optional[int] = None,
@@ -93,7 +92,7 @@ def solve(
     ]
 
     A_eq_con, b_eq_con = constraints_to_array(list(eq_constraints))
-    A_eq = np.concatenate((process_produces, A_eq_con))
+    A_eq = np.concatenate((processes.process_produces, A_eq_con))
     b_eq = np.concatenate((np.zeros(len(resources)), b_eq_con))
 
     A_le, b_le = constraints_to_array(list(le_constraints))

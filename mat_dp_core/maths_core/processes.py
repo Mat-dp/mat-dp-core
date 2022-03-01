@@ -1,5 +1,5 @@
 from itertools import starmap
-from typing import Any, List, MutableSequence, Sequence, Tuple, Union
+from typing import Any, List, MutableSequence, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from numpy import ndarray
@@ -110,9 +110,11 @@ class Process:
 class Processes:
     # Maps process names to resource demands
     _processes: MutableSequence[Tuple[ProcessName, ndarray]]
+    _process_produces: Optional[ndarray]  # (resources, processes)
 
     def __init__(self) -> None:
         self._processes = []
+        self._process_produces = None
 
     def create(
         self, name: ProcessName, *resources: Tuple[Resource, float]
@@ -176,3 +178,17 @@ class Processes:
 
     def __iter__(self):
         return map(self.__getitem__, range(len(self)))
+
+    @property
+    def process_produces(self) -> ndarray:
+        if self._process_produces is None:
+            max_resource_size = max([len(process.array) for process in self])
+            # Pad arrays out to the correct size:
+            # The processes weren't necessarily aware of the total number of
+            # resources at the time they were created
+            for process in self:
+                process.array.resize(max_resource_size, refcheck=False)
+            self._process_produces = np.transpose(
+                np.array([process.array for process in self])
+            )
+        return self._process_produces
