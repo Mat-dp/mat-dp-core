@@ -44,14 +44,14 @@ class Resources:
         """
         Create a resource
         """
-        resource_out = self[len(self._resources)]
+
         self._resources.append(
             (
                 name,
                 unit,
             )
         )
-        return resource_out
+        return self[len(self._resources) - 1]
 
     def load(
         self, resources: Sequence[Tuple[ResourceName, Unit]]
@@ -72,10 +72,11 @@ class Resources:
 
     def __getitem__(self, arg: Union[int, str]):
         if isinstance(arg, int):
-            if arg > len(self._resources):
-                raise IndexError("list index out of range")
-            else:
+            if arg < len(self._resources):
                 return Resource(index=arg, parent=self)
+            else:
+                raise IndexError("list index out of range")
+
         else:
             results = [
                 i for i, (name, _) in enumerate(self._resources) if name == arg

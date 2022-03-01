@@ -11,6 +11,13 @@ from mat_dp_core import (
     RunEqConstraint,
     RunRatioConstraint,
 )
+from mat_dp_core.maths_core.resources import Resource
+
+
+@pytest.fixture
+def test_resource() -> Resource:
+    resources = Resources()
+    return resources.create("test")
 
 
 @pytest.fixture
@@ -64,7 +71,9 @@ def farming_example_measure(farming_example) -> Measure:
     constraints = [
         EqConstraint("burger_consumption", processes["dairy_farm"], 10)
     ]
-    objective = processes["arable_farm"]
+    objective = (
+        2 * (processes["arable_farm"] * 2 + 3 * processes["dairy_farm"]) * 2
+    )
     return Measure(resources, processes, constraints, objective=objective)
 
 
@@ -98,9 +107,10 @@ def pizza_example() -> Tuple[Resources, Processes]:
 
 
 @pytest.fixture(
-    params=[0, 1, 2, 3],
+    params=[0, 1, 2, 3, 4],
     ids=[
         "raw_constraints",
+        "raw_constraints_with_multipliers",
         "higher_level_constraint_eq",
         "higher_level_constraint_resource_grid",
         "higher_level_constraint_resource_plant",
@@ -118,7 +128,23 @@ def pizza_example_measure(request, pizza_example) -> Measure:
             ),
             EqConstraint("required_energy", processes["energy_grid"], 8),
         ]
-    elif request.param == 1:
+    if request.param == 1:
+        constraints = [
+            EqConstraint(
+                "pizza_box_ratio",
+                (
+                    processes["pizza_box_producer"] * 2
+                    - processes["recycled_pizza_box_producer"] * 2
+                )
+                - (
+                    processes["pizza_box_producer"]
+                    - processes["recycled_pizza_box_producer"]
+                ),
+                0,
+            ),
+            EqConstraint("required_energy", processes["energy_grid"], 8),
+        ]
+    elif request.param == 2:
         constraints = [
             RunRatioConstraint(
                 processes["pizza_box_producer"],
@@ -127,7 +153,7 @@ def pizza_example_measure(request, pizza_example) -> Measure:
             ),
             RunEqConstraint(processes["energy_grid"], 8),
         ]
-    elif request.param == 2:
+    elif request.param == 3:
         constraints = [
             RunRatioConstraint(
                 processes["pizza_box_producer"],
