@@ -2,7 +2,7 @@ from typing import Tuple
 
 import pytest
 
-from mat_dp_core import Processes, Resources
+from mat_dp_core import EqConstraint, Measure, Processes, Resources
 
 
 @pytest.fixture
@@ -29,3 +29,13 @@ def unscaled_farming_example() -> Tuple[Resources, Processes]:
     processes.create("dairy_farm", (cow, +1000000000), (hay, -200000000000))
     processes.create("mcdonalds", (cow, -1000000000))
     return resources, processes
+
+
+@pytest.fixture
+def farming_example_measure(farming_example) -> Measure:
+    resources, processes = farming_example
+    constraints = [
+        EqConstraint("burger_consumption", processes["dairy_farm"], 10)
+    ]
+    objective = -processes["arable_farm"]
+    return Measure(resources, processes, constraints, objective=objective)
