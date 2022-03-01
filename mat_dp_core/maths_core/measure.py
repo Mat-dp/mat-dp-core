@@ -23,6 +23,16 @@ from .resources import Resource, Resources
 from .tools import get_order_ranges, get_row_scales
 
 
+def calculate_incident_flow(
+    flow_matrix, resource_index, process_index, flow_from: bool
+) -> float:
+    if flow_from:
+        column = flow_matrix[resource_index, process_index, :]
+    else:
+        column = flow_matrix[resource_index, :, process_index]
+    return np.sum(column, where=column > 0)
+
+
 class Measure:
     _resources: Resources
     _processes: Processes
@@ -593,6 +603,11 @@ class Measure:
         def constraints_to_array(
             constraints: List[_Constraint],
         ) -> Tuple[ndarray, ndarray]:
+            """
+            Converts a list of constraints to array format.
+
+            returns the tuple of A matrix and b vector forming an equation
+            """
             A_constraint_array = np.zeros((len(constraints), len(processes)))
             b_constraint_array = np.zeros((len(constraints)))
 
@@ -610,6 +625,17 @@ class Measure:
         elif len(processes) == 0:
             raise ValueError("No processes created")
 
+        if objective is None:
+            objective = reduce(
+                lambda x, y: x + y,
+                [process * 1 for process in self._processes],
+            )
+
+        # Build objective vector
+        coefficients = pack_constraint(objective)
+        coefficients.resize(len(processes), refcheck=False)
+        # TODO: Add Inconsistent order of mag check on coefficients
+
         eq_constraints = [
             constraint
             for constraint in constraints
@@ -622,20 +648,18 @@ class Measure:
         ]
 
         A_eq_con, b_eq_con = constraints_to_array(list(eq_constraints))
-        A_le_con, b_le_con = constraints_to_array(list(le_constraints))
-
         A_eq = np.concatenate((self._process_produces, A_eq_con))
         b_eq = np.concatenate((np.zeros(len(resources)), b_eq_con))
 
-        if objective is None:
-            objective = reduce(
-                lambda x, y: x + y,
-                [process * 1 for process in self._processes],
-            )
+        A_le, b_le = constraints_to_array(list(le_constraints))
 
-        # Build objective vector
-        coefficients = pack_constraint(objective)
-        coefficients.resize(len(processes), refcheck=False)
+        eq_equations = np.concatenate(
+            (A_eq, np.resize(b_eq, (len(b_eq), 1))), axis=1
+        )
+        le_equations = np.concatenate(
+            (A_le, np.resize(b_le, (len(b_le), 1))), axis=1
+        )
+
         # Solve
         # TODO: optimise with callback
         # TODO: optimise method
@@ -643,13 +667,6 @@ class Measure:
         options = {}
         if maxiter is not None:
             options["maxiter"] = maxiter
-
-        eq_equations = np.concatenate(
-            (A_eq, np.resize(b_eq, (len(b_eq), 1))), axis=1
-        )
-        le_equations = np.concatenate(
-            (A_le_con, np.resize(b_le_con, (len(b_le_con), 1))), axis=1
-        )
 
         if not allow_inconsistent_order_of_mag:
             eq_order_range = get_order_ranges(eq_equations)
@@ -664,72 +681,27 @@ class Measure:
                 and np.max(le_order_range) > order_limit
             )
             if eq_order_inconsistent or le_order_inconsistent:
-                if eq_order_inconsistent:
-                    resource_inconsistencies = [
-                        (
-                            resources[i],
-                            [
-                                (process, A_eq[i][j])
-                                for j, process in enumerate(self._processes)
-                                if A_eq[i][j] != 0
-                            ],
-                            v,
-                        )
-                        for i, v in enumerate(eq_order_range[: len(resources)])
-                        if v > order_limit
-                    ]
-                    eq_inconsistencies = [
-                        (
-                            eq_constraints[i],
-                            [
-                                (process, A_eq[i + len(self._processes)][j])
-                                for j, process in enumerate(self._processes)
-                                if A_eq[i + len(self._processes)][j] != 0
-                            ],
-                            v,
-                        )
-                        for i, v in enumerate(eq_order_range[len(resources) :])
-                        if v > order_limit
-                    ]
-                else:
-                    resource_inconsistencies = []
-                    eq_inconsistencies = []
-                if le_order_inconsistent:
-                    le_inconsistencies = [
-                        (
-                            le_constraints[i],
-                            [
-                                (process, A_le_con[i][j])
-                                for j, process in enumerate(self._processes)
-                                if A_le_con[i][j] != 0
-                            ],
-                            v,
-                        )
-                        for i, v in enumerate(le_order_range)
-                        if v > order_limit
-                    ]
-                else:
-                    le_inconsistencies = []
-
-                raise InconsistentOrderOfMagnitude(
-                    resource_inconsistencies,
-                    eq_inconsistencies,
-                    le_inconsistencies,
+                raise InconsistentOrderOfMagnitude.from_complex_objects(
+                    order_limit=order_limit,
+                    eq_order_range=eq_order_range,
+                    le_order_range=le_order_range,
+                    resources=resources,
+                    processes=processes,
+                    eq_constraints=eq_constraints,
+                    le_constraints=le_constraints,
+                    eq_matrix=A_eq,
+                    le_matrix=A_le,
                 )
 
         eq_scales = get_row_scales(eq_equations)
         le_scales = get_row_scales(le_equations)
-        red_A_eq = np.einsum("ij, i -> ij", A_eq, eq_scales)
-        red_b_eq = np.einsum("i, i -> i", b_eq, eq_scales)
-        red_A_ub = np.einsum("ij, i -> ij", A_le_con, le_scales)
-        red_b_ub = np.einsum("i, i -> i", b_le_con, le_scales)
 
         res = linprog(
             c=coefficients,
-            A_ub=red_A_ub,
-            b_ub=red_b_ub,
-            A_eq=red_A_eq,
-            b_eq=red_b_eq,
+            A_ub=np.einsum("ij, i -> ij", A_le, le_scales),
+            b_ub=np.einsum("i, i -> i", b_le, le_scales),
+            A_eq=np.einsum("ij, i -> ij", A_eq, eq_scales),
+            b_eq=np.einsum("i, i -> i", b_eq, eq_scales),
             options=options,
         )
 

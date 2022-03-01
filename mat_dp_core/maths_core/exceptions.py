@@ -176,3 +176,75 @@ class InconsistentOrderOfMagnitude(Exception):
                     message_list.append(f"{process}: {process_demand}")
                 message_list.append("\n")
         super().__init__("\n".join(message_list))
+
+    @classmethod
+    def from_complex_objects(
+        cls,
+        order_limit: float,
+        eq_order_range: np.ndarray,
+        le_order_range: np.ndarray,
+        resources: Resources,
+        processes: Processes,
+        eq_constraints: List[EqConstraint],
+        le_constraints: List[LeConstraint],
+        eq_matrix: np.ndarray,
+        le_matrix: np.ndarray,
+    ):
+        eq_order_inconsistent = (
+            len(eq_order_range) > 0 and np.max(eq_order_range) > order_limit
+        )
+        le_order_inconsistent = (
+            len(le_order_range) > 0 and np.max(le_order_range) > order_limit
+        )
+        if eq_order_inconsistent:
+            resource_inconsistencies = [
+                (
+                    resources[i],
+                    [
+                        (process, eq_matrix[i][j])
+                        for j, process in enumerate(processes)
+                        if eq_matrix[i][j] != 0
+                    ],
+                    v,
+                )
+                for i, v in enumerate(eq_order_range[: len(resources)])
+                if v > order_limit
+            ]
+            eq_inconsistencies = [
+                (
+                    eq_constraints[i],
+                    [
+                        (process, eq_matrix[i + len(processes)][j])
+                        for j, process in enumerate(processes)
+                        if eq_matrix[i + len(processes)][j] != 0
+                    ],
+                    v,
+                )
+                for i, v in enumerate(eq_order_range[len(resources) :])
+                if v > order_limit
+            ]
+        else:
+            resource_inconsistencies = []
+            eq_inconsistencies = []
+        if le_order_inconsistent:
+            le_inconsistencies = [
+                (
+                    le_constraints[i],
+                    [
+                        (process, le_matrix[i][j])
+                        for j, process in enumerate(processes)
+                        if le_matrix[i][j] != 0
+                    ],
+                    v,
+                )
+                for i, v in enumerate(le_order_range)
+                if v > order_limit
+            ]
+        else:
+            le_inconsistencies = []
+
+        return cls(
+            resource_inconsistencies,
+            eq_inconsistencies,
+            le_inconsistencies,
+        )
