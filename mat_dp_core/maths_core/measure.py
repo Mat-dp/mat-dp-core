@@ -263,6 +263,14 @@ class Measure:
         else:
             return self._run_vector[process.index]
 
+    @property
+    def resource_matrix(self):
+        if self._resource_matrix is None:
+            self._resource_matrix = construct_resource_matrix(
+                self._processes.process_produces, self._run_vector
+            )
+        return self._resource_matrix
+
     @overload
     def resource(self) -> Sequence[Tuple[Process, Resource, float]]:
         """
@@ -308,16 +316,18 @@ class Measure:
         Sequence[Tuple[Process, float]],
         float,
     ]:
-        if self._resource_matrix is None:
-            self._resource_matrix = construct_resource_matrix(
-                self._processes.process_produces, self._run_vector
-            )
         return extract_from_resource_process_array(
-            self._resource_matrix,
+            self.resource_matrix,
             self._resources,
             self._processes,
             (arg1, arg2),
         )
+
+    @property
+    def flow_matrix(self):
+        if self._flow_matrix is None:
+            self._flow_matrix = construct_flow_matrix(self.resource_matrix)
+        return self._flow_matrix
 
     @overload
     def flow(self) -> Sequence[Tuple[Process, Process, Resource, float]]:
@@ -369,13 +379,6 @@ class Measure:
         Sequence[Tuple[Process, Process, float]],
         float,
     ]:
-        if self._resource_matrix is None:
-            self._resource_matrix = construct_resource_matrix(
-                self._processes.process_produces, self._run_vector
-            )
-        if self._flow_matrix is None:
-            self._flow_matrix = construct_flow_matrix(self._resource_matrix)
-
         if arg1 is None and arg2 is None and arg3 is None:
             output = []
             for p1 in self._processes:
@@ -387,7 +390,7 @@ class Measure:
                                     p1,
                                     p2,
                                     r,
-                                    self._flow_matrix[r.index][p1.index][
+                                    self.flow_matrix[r.index][p1.index][
                                         p2.index
                                     ],
                                 )
@@ -402,7 +405,7 @@ class Measure:
                             (
                                 p1,
                                 p2,
-                                self._flow_matrix[arg1.index][p1.index][
+                                self.flow_matrix[arg1.index][p1.index][
                                     p2.index
                                 ],
                             )
@@ -416,7 +419,7 @@ class Measure:
                 output.append(
                     (
                         r,
-                        self._flow_matrix[r.index][arg1.index][arg2.index],
+                        self.flow_matrix[r.index][arg1.index][arg2.index],
                     )
                 )
             return output
@@ -424,7 +427,7 @@ class Measure:
             assert isinstance(arg1, Process)
             if arg1.index == arg2.index:
                 raise ValueError(f"Same process {arg1.name} supplied")
-            return self._flow_matrix[arg3.index][arg1.index][arg2.index]
+            return self.flow_matrix[arg3.index][arg1.index][arg2.index]
         else:
             assert False
 
@@ -450,20 +453,12 @@ class Measure:
     def flow_from(
         self, process: Process, resource: Optional[Resource] = None
     ) -> Union[Sequence[Tuple[Resource, float]], float]:
-
-        if self._resource_matrix is None:
-            self._resource_matrix = construct_resource_matrix(
-                self._processes.process_produces, self._run_vector
-            )
-        if self._flow_matrix is None:
-            self._flow_matrix = construct_flow_matrix(self._resource_matrix)
-
         if resource is None:
             return [
                 (
                     r,
                     calculate_incident_flow(
-                        self._flow_matrix,
+                        self.flow_matrix,
                         r.index,
                         process.index,
                         flow_from=True,
@@ -473,7 +468,7 @@ class Measure:
             ]
         else:
             return calculate_incident_flow(
-                self._flow_matrix,
+                self.flow_matrix,
                 resource.index,
                 process.index,
                 flow_from=True,
@@ -501,20 +496,12 @@ class Measure:
     def flow_to(
         self, process: Process, resource: Optional[Resource] = None
     ) -> Union[Sequence[Tuple[Resource, float]], float]:
-
-        if self._resource_matrix is None:
-            self._resource_matrix = construct_resource_matrix(
-                self._processes.process_produces, self._run_vector
-            )
-        if self._flow_matrix is None:
-            self._flow_matrix = construct_flow_matrix(self._resource_matrix)
-
         if resource is None:
             return [
                 (
                     r,
                     calculate_incident_flow(
-                        self._flow_matrix,
+                        self.flow_matrix,
                         r.index,
                         process.index,
                         flow_from=False,
@@ -524,11 +511,24 @@ class Measure:
             ]
         else:
             return calculate_incident_flow(
-                self._flow_matrix,
+                self.flow_matrix,
                 resource.index,
                 process.index,
                 flow_from=False,
             )
+
+    @property
+    def cumulative_resource_matrix(self):
+        if self._cumulative_resource_matrix is None:
+            self._cumulative_resource_matrix = (
+                construct_cumulative_resource_matrix(
+                    self._resources,
+                    self._processes,
+                    self._run_vector,
+                    self._allow_inconsistent_order_of_mag,
+                )
+            )
+        return self._cumulative_resource_matrix
 
     @overload
     def cumulative_resource(self) -> Sequence[Tuple[Process, Resource, float]]:
@@ -579,17 +579,8 @@ class Measure:
         Sequence[Tuple[Process, float]],
         float,
     ]:
-        if self._cumulative_resource_matrix is None:
-            self._cumulative_resource_matrix = (
-                construct_cumulative_resource_matrix(
-                    self._resources,
-                    self._processes,
-                    self._run_vector,
-                    self._allow_inconsistent_order_of_mag,
-                )
-            )
         return extract_from_resource_process_array(
-            self._cumulative_resource_matrix,
+            self.cumulative_resource_matrix,
             self._resources,
             self._processes,
             (arg1, arg2),
