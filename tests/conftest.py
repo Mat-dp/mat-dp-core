@@ -2,7 +2,13 @@ from typing import Tuple
 
 import pytest
 
-from mat_dp_core import EqConstraint, Measure, Processes, Resources
+from mat_dp_core import (
+    EqConstraint,
+    Measure,
+    Processes,
+    ResourceConstraint,
+    Resources,
+)
 
 
 @pytest.fixture
@@ -111,3 +117,42 @@ def parallel_farming_example_measure(parallel_farming_example) -> Measure:
     ]
     objective = processes["arable_farm"]
     return Measure(resources, processes, constraints, objective=objective)
+
+
+@pytest.fixture
+def real_example_measure() -> Measure:
+    resources = Resources()
+    aluminium = resources.create("aluminium", unit="g")
+    steel = resources.create("steel", unit="g")
+    concrete = resources.create("concrete", unit="g")
+    electronics = resources.create("electronics")
+    energy = resources.create("energy", unit="kWh")
+
+    processes = Processes()
+    processes.create("concrete_producer", (concrete, +1))
+    processes.create("steel_producer", (steel, +1))
+    processes.create("aluminium_producer", (aluminium, +1))
+
+    processes.create("electronics_producer", (electronics, +1))
+    processes.create("energy_grid", (energy, -1))
+
+    wind = processes.create(
+        "wind", (aluminium, -2), (concrete, -3), (energy, +1)
+    )
+    solar = processes.create(
+        "solar",
+        (steel, -1),
+        (electronics, -1),
+        (aluminium, -0.5),
+        (energy, +1),
+    )
+    coal = processes.create(
+        "coal", (concrete, -5), (energy, +1), (electronics, 0)
+    )
+
+    wind_con = ResourceConstraint(energy, wind, 5)
+    coal_con = ResourceConstraint(energy, coal, 5)
+    solar_con = ResourceConstraint(energy, solar, 5)
+    constraints = [wind_con, coal_con, solar_con]
+
+    return Measure(resources, processes, constraints, objective=None)
