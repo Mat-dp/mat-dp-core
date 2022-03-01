@@ -116,6 +116,104 @@ def construct_flow_matrix(resource_matrix: ndarray) -> ndarray:
     )
 
 
+def construct_cumulative_resource_matrix(
+    resources: Resources,
+    processes: Processes,
+    run_vector: ndarray,
+    allow_inconsistent_order_of_mag: bool,
+) -> ndarray:
+    """
+    resources - The resources object
+    processes - The processes object
+    run_vector - the vector of processes describing the solution from __init__
+    allow_inconsistent_order_of_mag - boolean that allows the solver to ignore inconsistent orders
+    of magnitude
+
+    returns a cumulative_resource_matrix (resource, process) describing the total resource used
+    by each process
+    """
+
+    def make_eq_constraints(
+        production_matrix: ndarray,
+        processes: Processes,
+        run_vector: ndarray,
+    ) -> List[EqConstraint]:
+        def make_eq_constraint(
+            process1: Process, process2: Process, p2_over_p1: float
+        ) -> EqConstraint:
+            """
+            Given two processes and the ratio between them make an eq_constraint.
+            """
+            return EqConstraint(
+                f"{process1.name}_{process2.name}_1:{p2_over_p1}ratio",
+                process1 - p2_over_p1 * process2,
+                0,
+            )
+
+        def identify_process_index_pairs(
+            production_matrix,
+        ) -> List[Tuple[int, int]]:
+            """
+            Identify pairs of process indices that both produce the same resource
+            """
+            final_pairs = []
+            for resource in production_matrix:
+                non_zero_elems = np.nonzero(resource)[0]
+                if len(non_zero_elems) > 1:
+                    pairs = [
+                        (non_zero_elems[0], i) for i in non_zero_elems[1:]
+                    ]
+                    final_pairs += pairs
+            return final_pairs
+
+        process_pairs = identify_process_index_pairs(production_matrix)
+
+        eq_constraints = []
+        for process1_index, process2_index in process_pairs:
+            process1 = processes[int(process1_index)]
+            process2 = processes[int(process2_index)]
+            process1_runs = run_vector[process1_index]
+            process2_runs = run_vector[process2_index]
+            p2_over_p1 = process2_runs / process1_runs
+            eq_constraints.append(
+                make_eq_constraint(process1, process2, p2_over_p1)
+            )
+        return eq_constraints
+
+    objective: ProcessExpr = reduce(
+        lambda x, y: x + y,
+        [process * 1 for process in processes],
+    )
+    production_matrix = np.where(
+        processes.process_produces > 0,
+        processes.process_produces,
+        0,
+    )
+    eq_cons = make_eq_constraints(production_matrix, processes, run_vector)
+    process_process_matrix = np.array(
+        [
+            solve(
+                resources,
+                processes,
+                constraints=[
+                    EqConstraint(
+                        f"{process.name}_no_runs",
+                        process,
+                        run_vector[process.index],
+                    )
+                ]
+                + eq_cons,
+                objective=objective,
+                maxiter=None,
+                allow_inconsistent_order_of_mag=allow_inconsistent_order_of_mag,
+            )
+            for process in processes
+        ],
+        dtype=float,
+    )
+    return np.einsum("ij, kj -> ki", process_process_matrix, production_matrix)
+
+
 class Measure:
     _resources: Resources
     _processes: Processes
@@ -481,90 +579,14 @@ class Measure:
         Sequence[Tuple[Process, float]],
         float,
     ]:
-        def make_eq_constraints(
-            production_matrix: ndarray,
-            processes: Processes,
-            run_vector: ndarray,
-        ) -> List[EqConstraint]:
-            def make_eq_constraint(
-                process1: Process, process2: Process, p2_over_p1: float
-            ) -> EqConstraint:
-                """
-                Given two processes and the ratio between them make an eq_constraint.
-                """
-                return EqConstraint(
-                    f"{process1.name}_{process2.name}_1:{p2_over_p1}ratio",
-                    process1 - p2_over_p1 * process2,
-                    0,
-                )
-
-            def identify_process_index_pairs(
-                production_matrix,
-            ) -> List[Tuple[int, int]]:
-                """
-                Identify pairs of process indices that both produce the same resource
-                """
-                final_pairs = []
-                for resource in production_matrix:
-                    non_zero_elems = np.nonzero(resource)[0]
-                    if len(non_zero_elems) > 1:
-                        pairs = [
-                            (non_zero_elems[0], i) for i in non_zero_elems[1:]
-                        ]
-                        final_pairs += pairs
-                return final_pairs
-
-            process_pairs = identify_process_index_pairs(production_matrix)
-
-            eq_constraints = []
-            for process1_index, process2_index in process_pairs:
-                process1 = processes[int(process1_index)]
-                process2 = processes[int(process2_index)]
-                process1_runs = run_vector[process1_index]
-                process2_runs = run_vector[process2_index]
-                p2_over_p1 = process2_runs / process1_runs
-                eq_constraints.append(
-                    make_eq_constraint(process1, process2, p2_over_p1)
-                )
-            return eq_constraints
-
         if self._cumulative_resource_matrix is None:
-            objective: ProcessExpr = reduce(
-                lambda x, y: x + y,
-                [process * 1 for process in self._processes],
-            )
-            production_matrix = np.where(
-                self._processes.process_produces > 0,
-                self._processes.process_produces,
-                0,
-            )
-            eq_cons = make_eq_constraints(
-                production_matrix, self._processes, self._run_vector
-            )
-            process_process_matrix = np.array(
-                [
-                    solve(
-                        self._resources,
-                        self._processes,
-                        constraints=[
-                            EqConstraint(
-                                f"{process.name}_no_runs",
-                                process,
-                                self._run_vector[process.index],
-                            )
-                        ]
-                        + eq_cons,
-                        objective=objective,
-                        maxiter=None,
-                        allow_inconsistent_order_of_mag=self._allow_inconsistent_order_of_mag,
-                    )
-                    for process in self._processes
-                ],
-                dtype=float,
-            )
-
-            self._cumulative_resource_matrix = np.einsum(
-                "ij, kj -> ki", process_process_matrix, production_matrix
+            self._cumulative_resource_matrix = (
+                construct_cumulative_resource_matrix(
+                    self._resources,
+                    self._processes,
+                    self._run_vector,
+                    self._allow_inconsistent_order_of_mag,
+                )
             )
         return extract_from_resource_process_array(
             self._cumulative_resource_matrix,
