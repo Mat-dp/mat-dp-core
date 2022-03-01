@@ -30,6 +30,9 @@ class Resource:
         else:
             return self.index == other.index and self._parent == other._parent
 
+    def __format__(self, format_spec: str) -> str:
+        return f"{self.name}"
+
 
 class Resources:
     _resources: MutableSequence[Tuple[ResourceName, Unit]]

@@ -45,14 +45,18 @@ class ResourceConstraint(EqConstraint):
         try:
             demand = process.array[resource.index]
         except IndexError:
-            raise ValueError("Invalid demand")
+            raise ValueError(
+                f"Invalid demand: {resource} demanded from {process} but process does not produce or consume this"
+            )
 
         if demand < 0:
             positive = False
         elif demand > 0:
             positive = True
         else:
-            raise ValueError("Invalid demand")
+            raise ValueError(
+                f"Invalid demand: {resource} demanded from {process} but process does not produce or consume this"
+            )
 
         no_runs = resource_bound / abs(demand)
 

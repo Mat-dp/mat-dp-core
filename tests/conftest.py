@@ -79,11 +79,17 @@ def pizza_example() -> Tuple[Resources, Processes]:
 
 
 @pytest.fixture(
-    params=[True, False], ids=["raw_constraints", "higher_level_constraint"]
+    params=[0, 1, 2, 3],
+    ids=[
+        "raw_constraints",
+        "higher_level_constraint_eq",
+        "higher_level_constraint_resource_grid",
+        "higher_level_constraint_resource_plant",
+    ],
 )
 def pizza_example_measure(request, pizza_example) -> Measure:
     resources, processes = pizza_example
-    if request.param:
+    if request.param == 0:
         constraints = [
             EqConstraint(
                 "pizza_box_ratio",
@@ -93,7 +99,7 @@ def pizza_example_measure(request, pizza_example) -> Measure:
             ),
             EqConstraint("required_energy", processes["energy_grid"], 8),
         ]
-    else:
+    elif request.param == 1:
         constraints = [
             RunRatioConstraint(
                 processes["pizza_box_producer"],
@@ -101,6 +107,28 @@ def pizza_example_measure(request, pizza_example) -> Measure:
                 1,
             ),
             RunEqConstraint(processes["energy_grid"], 8),
+        ]
+    elif request.param == 2:
+        constraints = [
+            RunRatioConstraint(
+                processes["pizza_box_producer"],
+                processes["recycled_pizza_box_producer"],
+                1,
+            ),
+            ResourceConstraint(
+                resources["energy"], processes["energy_grid"], 16
+            ),
+        ]
+    else:
+        constraints = [
+            RunRatioConstraint(
+                processes["pizza_box_producer"],
+                processes["recycled_pizza_box_producer"],
+                1,
+            ),
+            ResourceConstraint(
+                resources["energy"], processes["power_plant"], 16
+            ),
         ]
     return Measure(resources, processes, constraints, objective=None)
 
