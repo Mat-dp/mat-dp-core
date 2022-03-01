@@ -146,7 +146,7 @@ def solve(
         b_eq=np.einsum("i, i -> i", b_eq, eq_scales),
         options=options,
     )
-
+    assert res.status in [0, 1, 2, 3, 4]
     if res.status == 0:  # Optimization terminated successfully
         return res.x
     elif res.status == 1:  # Iteration limit reached
@@ -173,7 +173,5 @@ def solve(
             (process, res.x[process.index]) for process in processes
         ]
         raise UnboundedSolution(process_sols)
-    elif res.status == 4:  # Numerical difficulties encountered
+    else:  # Numerical difficulties encountered
         raise NumericalDifficulties
-    else:
-        assert False

@@ -14,6 +14,25 @@ from mat_dp_core import (
 
 
 @pytest.fixture
+def null_example() -> Tuple[Resources, Processes]:
+    resources = Resources()
+    hay = resources.create("hay")
+    cow = resources.create("cow")
+
+    processes = Processes()
+    processes.create("arable_farm", (hay, 0))
+    processes.create("dairy_farm", (hay, 0), (cow, 0))
+    processes.create("mcdonalds", (cow, 0))
+    return resources, processes
+
+
+@pytest.fixture
+def null_example_measure(null_example) -> Measure:
+    resources, processes = null_example
+    return Measure(resources, processes, [], objective=None)
+
+
+@pytest.fixture
 def farming_example() -> Tuple[Resources, Processes]:
     resources = Resources()
     hay = resources.create("hay")

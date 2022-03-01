@@ -119,8 +119,10 @@ class Processes:
     def create(
         self, name: ProcessName, *resources: Tuple[Resource, float]
     ) -> Process:
+        if len(resources) == 0:
+            raise ValueError(f"No resources attached to {name}")
         res_max_index = (
-            max((resource.index for (resource, _) in resources)) + 1
+            max([resource.index for (resource, _) in resources]) + 1
         )
         array = np.zeros(res_max_index)
         for (resource, v) in resources:

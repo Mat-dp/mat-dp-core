@@ -64,10 +64,9 @@ def extract_from_resource_process_array(
                 resource_process_array[arg1.index],
             )
         )
-    elif arg1 is not None and arg2 is not None:
-        return resource_process_array[arg2.index][arg1.index]
     else:
-        assert False
+        assert arg1 is not None and arg2 is not None
+        return resource_process_array[arg2.index][arg1.index]
 
 
 def construct_resource_matrix(
@@ -423,13 +422,12 @@ class Measure:
                     )
                 )
             return output
-        elif arg1 is not None and arg2 is not None and arg3 is not None:
+        else:
+            assert arg1 is not None and arg2 is not None and arg3 is not None
             assert isinstance(arg1, Process)
             if arg1.index == arg2.index:
                 raise ValueError(f"Same process {arg1.name} supplied")
             return self.flow_matrix[arg3.index][arg1.index][arg2.index]
-        else:
-            assert False
 
     @overload
     def flow_from(self, process: Process) -> Sequence[Tuple[Resource, float]]:

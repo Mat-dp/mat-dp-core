@@ -5,6 +5,59 @@ from mat_dp_core import Measure
 
 
 @pytest.mark.asyncio
+class TestNull:
+    async def test_run_vector(self, null_example_measure: Measure):
+        run_vector = null_example_measure._run_vector
+        print(run_vector)
+        assert np.array_equal(
+            np.round(run_vector, decimals=3),
+            np.array(
+                [0, 0, 0],
+                dtype=float,
+            ),
+        )
+
+    async def test_resource_matrix(self, null_example_measure: Measure):
+        resource_matrix = null_example_measure.resource_matrix
+        assert np.array_equal(
+            np.round(resource_matrix, decimals=3),
+            np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], dtype=float),
+        )
+
+    async def test_flow_matrix(self, null_example_measure: Measure):
+        flow_matrix = null_example_measure.flow_matrix
+        assert np.array_equal(
+            np.round(flow_matrix, decimals=3),
+            np.array(
+                [
+                    [
+                        [0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                    ],
+                    [
+                        [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                    ],
+                ],
+                dtype=float,
+            ),
+        )
+
+    async def test_cumulative_resource_matrix(
+        self, null_example_measure: Measure
+    ):
+        cumulative_resource_matrix = (
+            null_example_measure.cumulative_resource_matrix
+        )
+        assert np.array_equal(
+            np.round(cumulative_resource_matrix, decimals=3),
+            np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0]], dtype=float),
+        )
+
+
+@pytest.mark.asyncio
 class TestFarming:
     async def test_run_vector(self, farming_example_measure: Measure):
         run_vector = farming_example_measure._run_vector

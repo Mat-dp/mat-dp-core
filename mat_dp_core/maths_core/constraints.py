@@ -39,7 +39,7 @@ class EqConstraint(_Constraint):
     """
 
     def __repr__(self) -> str:
-        return f"<EqConstraint: {self.name}\nEquation:{self.weighted_processes} == {self.bound}>"
+        return f"<{self.__class__.__name__}: {self.name}\nEquation:{self.weighted_processes} == {self.bound}>"
 
     def __format__(self, format_spec: str) -> str:
         return f"{self.weighted_processes} == {self.bound}"
@@ -47,17 +47,25 @@ class EqConstraint(_Constraint):
 
 class LeConstraint(_Constraint):
     """
-    Less than or equal constraint
+    Less than or equal to constraint
     """
 
     def __repr__(self) -> str:
-        return f"<LeConstraint: {self.name}\nEquation:{self.weighted_processes} == {self.bound}>"
+        return f"<{self.__class__.__name__}: {self.name}\nEquation:{self.weighted_processes} <= {self.bound}>"
 
     def __format__(self, format_spec: str) -> str:
-        return f"{self.weighted_processes} == {self.bound}"
+        return f"{self.weighted_processes} <= {self.bound}"
 
 
-def GeConstraint(
-    name: str, weighted_processes: Union[Process, ProcessExpr], bound: float
-):
-    return LeConstraint(name, -weighted_processes, -bound)
+class GeConstraint(LeConstraint):
+    """
+    Greater than or equal to constraint
+    """
+
+    def __init__(
+        self,
+        name: str,
+        weighted_processes: Union[Process, ProcessExpr],
+        bound: float,
+    ):
+        super().__init__(name, -weighted_processes, -bound)
