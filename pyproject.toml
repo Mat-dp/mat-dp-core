@@ -6,7 +6,6 @@ authors = ["Edd Salkield <edd@salkield.uk>"]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.10"
-sympy = "^1.9"
 scipy = "^1.7.1"
 mkdocs = "^1.2.3"
 mkdocs-material = "^8.1.7"

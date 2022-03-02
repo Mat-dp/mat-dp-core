@@ -27,7 +27,7 @@ pizza_box_producer = processes.create(
 recycled_pizza_box_producer = processes.create(
     "recycled pizza box producer",
     (recycled_cardboard, -3),
-    (cardboard, -1),
+    (cardboard, -0.01),
     (pizza_box, 1),
 )
 power_plant = processes.create("power plant", (pizza_box, -1), (energy, 4))
@@ -53,6 +53,9 @@ objective = (
 )
 
 measurement = Measure(resources, processes, constraints, objective)
+from pprint import pprint
 
 print(measurement._run_vector)
+print("flow", measurement.resource())
 print(measurement.resource(pizza_box))
+pprint(measurement.cumulative_resource())

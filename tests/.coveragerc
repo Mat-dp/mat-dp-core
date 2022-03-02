@@ -1,0 +1,6 @@
+[report]
+exclude_lines = 
+    pragma: not covered
+    @overload
+
+show_missing = True

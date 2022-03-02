@@ -32,9 +32,9 @@ solar = processes.create(
 coal = processes.create("coal", (concrete, -5), (energy, +1), (electronics, 0))
 
 
-wind_con = ResourceConstraint(energy, wind, resources, processes, 5)
-coal_con = ResourceConstraint(energy, coal, resources, processes, 5)
-solar_con = ResourceConstraint(energy, solar, resources, processes, 5)
+wind_con = ResourceConstraint(energy, wind, 5)
+coal_con = ResourceConstraint(energy, coal, 5)
+solar_con = ResourceConstraint(energy, solar, 5)
 constraints = [wind_con, coal_con, solar_con]
 print(constraints)
 # Minimise run total
