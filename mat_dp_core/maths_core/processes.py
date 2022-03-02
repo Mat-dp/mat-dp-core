@@ -73,16 +73,16 @@ class ProcessExpr:
     def __sub__(self, other):
         return self + -other
 
-    def __rsub__(self, other):
-        return other + -self
-
     def __repr__(self) -> str:
         return "<ProcessExpr {}>".format(
             " + ".join(map(format, self._processes))
         )
 
     def __format__(self, format_spec: str) -> str:
-        return "{}".format(" + ".join(map(format, self._processes)))
+        formatted_string = "{}".format(
+            " + ".join(map(format, self._processes))
+        )
+        return formatted_string.replace("+ -", "-")
 
     def __getitem__(self, arg):
         return self._processes[arg]
@@ -127,21 +127,24 @@ class Process:
         return self * 1 + other * 1
 
     def __repr__(self) -> str:
-        return f"<Process: {self.name}" + (
-            ">" if self.multiplier == 1 else f" * {self.multiplier}>"
-        )
+        return f"<Process: {format(self)}>"
 
     def __format__(self, format_spec: str) -> str:
-        return f"{self.name}{'' if self.multiplier == 1 else f' * {self.multiplier}'}"
+        if self.multiplier < 0:
+            sign = "- "
+        else:
+            sign = ""
+        multiplier_mag = abs(self.multiplier)
+        if multiplier_mag == 1:
+            return f"{sign}{self.name}"
+        else:
+            return f"{sign}{multiplier_mag}*{self.name}"
 
     def __neg__(self):
         return self * -1
 
     def __sub__(self, other):
         return self * 1 + -other
-
-    def __rsub__(self, other):
-        return other + -self
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Process):
@@ -172,9 +175,8 @@ class Processes:
             i = resource.index
             array[i] = v
         process_inner = (name, array)
-        process_out = self[len(self._processes)]
         self._processes.append(process_inner)
-        return process_out
+        return self[len(self._processes) - 1]
 
     def load(
         self,
@@ -206,10 +208,10 @@ class Processes:
 
     def __getitem__(self, arg: Union[int, str]):
         if isinstance(arg, int):
-            if arg > len(self._processes):
-                raise IndexError("list index out of range")
-            else:
+            if arg < len(self._processes):
                 return Process(index=arg, parent=self)
+            else:
+                raise IndexError("list index out of range")
         else:
             results = [
                 i for i, (name, _) in enumerate(self._processes) if name == arg
