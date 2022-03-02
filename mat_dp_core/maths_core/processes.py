@@ -1,3 +1,4 @@
+from copy import copy
 from itertools import starmap
 from typing import Any, List, MutableSequence, Optional, Sequence, Tuple, Union
 
@@ -15,9 +16,44 @@ class ProcessExpr:
 
     def __add__(self, other: Union["ProcessExpr", "Process"]) -> "ProcessExpr":
         if isinstance(other, ProcessExpr):
-            return ProcessExpr(self._processes + other._processes)
+            expr_parent = other._processes[0]._parent
+            self_parent = self._processes[0]._parent
+            if self_parent != expr_parent:
+                raise ValueError(
+                    "Combining two exprs from different processes classes"
+                )
+
+            for process in other._processes:
+                if process not in self._processes:
+                    self._processes.append(process)
+                else:
+                    current_process = self._processes[
+                        self._processes.index(process)
+                    ]
+                    current_process.multiplier = (
+                        current_process.multiplier + process.multiplier
+                    )
         else:
-            return ProcessExpr(self._processes + [other])
+            process_parent = other._parent
+            self_parent = self._processes[0]._parent
+            if self_parent != process_parent:
+                raise ValueError(
+                    "Combining process and expr from different processes classes"
+                )
+
+            other_new = copy(other)
+            if other_new not in self._processes:
+                self._processes.append(other_new)
+            else:
+                current_process = self._processes[
+                    self._processes.index(other_new)
+                ]
+                current_process.multiplier = (
+                    current_process.multiplier + other_new.multiplier
+                )
+        return ProcessExpr(
+            [process for process in self._processes if process.multiplier != 0]
+        )
 
     def __mul__(self, other: float) -> "ProcessExpr":
         if other == 1:
@@ -36,6 +72,9 @@ class ProcessExpr:
 
     def __sub__(self, other):
         return self + -other
+
+    def __rsub__(self, other):
+        return other + -self
 
     def __repr__(self) -> str:
         return "<ProcessExpr {}>".format(
@@ -77,8 +116,9 @@ class Process:
         return self._parent._processes[self.index][1]
 
     def __mul__(self, other: float) -> ProcessExpr:
-        self.multiplier *= other
-        return ProcessExpr([self])
+        new_proc = copy(self)
+        new_proc.multiplier *= other
+        return ProcessExpr([new_proc])
 
     def __rmul__(self, other: float) -> ProcessExpr:
         return self * other
@@ -88,7 +128,7 @@ class Process:
 
     def __repr__(self) -> str:
         return f"<Process: {self.name}" + (
-            ">" if self.multiplier == 1 else " * {self.multiplier}>"
+            ">" if self.multiplier == 1 else f" * {self.multiplier}>"
         )
 
     def __format__(self, format_spec: str) -> str:
@@ -98,7 +138,10 @@ class Process:
         return self * -1
 
     def __sub__(self, other):
-        return self + -other
+        return self * 1 + -other
+
+    def __rsub__(self, other):
+        return other + -self
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Process):
@@ -180,6 +223,16 @@ class Processes:
 
     def __iter__(self):
         return map(self.__getitem__, range(len(self)))
+
+    def __contains__(self, other: Any) -> bool:
+        if isinstance(other, Process):
+            process_index = other.index
+            if process_index in range(len(self)) and other._parent == self:
+                return True
+            else:
+                return False
+        else:
+            return False
 
     @property
     def process_produces(self) -> ndarray:
