@@ -39,7 +39,7 @@ class EqConstraint(_Constraint):
     """
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}: {self.name}\nEquation:{self.weighted_processes} == {self.bound}>"
+        return f"<{self.__class__.__name__}: {self.name} | Equation:{self.weighted_processes} == {self.bound}>"
 
     def __format__(self, format_spec: str) -> str:
         return f"{self.weighted_processes} == {self.bound}"
@@ -51,7 +51,7 @@ class LeConstraint(_Constraint):
     """
 
     def __repr__(self) -> str:
-        return f"<{self.__class__.__name__}: {self.name}\nEquation:{self.weighted_processes} <= {self.bound}>"
+        return f"<{self.__class__.__name__}: {self.name} | Equation:{self.weighted_processes} <= {self.bound}>"
 
     def __format__(self, format_spec: str) -> str:
         return f"{self.weighted_processes} <= {self.bound}"

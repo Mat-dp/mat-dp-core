@@ -1,4 +1,4 @@
-from typing import List, Sequence, Tuple
+from typing import Any, List, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -31,12 +31,34 @@ class Overconstrained(Exception):
             for (constraint, val, producers, consumers) in constraints:
                 producer_names = ", ".join([p.name for p in producers])
                 consumer_names = ", ".join([p.name for p in consumers])
+                format_str = None
                 if val < 0:
-                    format_str = f"Increase runs of {producer_names} or decrease runs of {consumer_names}"
+                    message_list = []
+                    if len(producer_names) != 0:
+                        message_list.append(
+                            f"increase runs of {producer_names}"
+                        )
+                    if len(consumer_names) != 0:
+                        message_list.append(
+                            f"decrease runs of {consumer_names}"
+                        )
+
+                    assert len(message_list) > 0
+                    format_str = " or ".join(message_list)
                 elif val > 0:
-                    format_str = f"Increase runs of {consumer_names} or decrease runs of {producer_names}"
-                else:
-                    format_str = None
+                    message_list = []
+                    if len(consumer_names) != 0:
+                        message_list.append(
+                            f"increase runs of {consumer_names}"
+                        )
+                    if len(producer_names) != 0:
+                        message_list.append(
+                            f"decrease runs of {producer_names}"
+                        )
+
+                    assert len(message_list) > 0
+                    format_str = " or ".join(message_list)
+
                 if format_str is not None:
                     full_string = (
                         f"{constraint} => {val}: "
@@ -123,10 +145,10 @@ class UnboundedSolution(Exception):
         message_list = ["Solution unbounded - final solution was:"]
         for p, sol in process_sols:
             if sol > 10 ** 7 or sol < 10 ** -7:
-                comment = "(probably unbounded)"
+                comment = " (probably unbounded)"
             else:
                 comment = ""
-            message_list.append(f"{p}: {sol} {comment}")
+            message_list.append(f"{p}: {sol}{comment}")
 
         super().__init__("\n".join(message_list))
 
@@ -194,6 +216,32 @@ class InconsistentOrderOfMagnitude(Exception):
         eq_matrix: np.ndarray,
         le_matrix: np.ndarray,
     ):
+        def get_inconsistencies(
+            order_limit: float,
+            order_range: np.ndarray,
+            group: Union[Resources, List[EqConstraint], List[LeConstraint]],
+            processes: Processes,
+            matrix: np.ndarray,
+            matrix_start_row: int = 0,
+        ) -> List[Tuple[Any, List[Tuple[Process, float]], float]]:
+            inconsistencies = []
+            for i, v in enumerate(order_range):
+                if v > order_limit:
+                    related_processes = []
+                    for j, process in enumerate(processes):
+                        if matrix[i + matrix_start_row][j] != 0:
+                            process_demand = (process, matrix[i][j])
+                            related_processes.append(process_demand)
+
+                    inconsistencies.append(
+                        (
+                            group[i],
+                            related_processes,
+                            v,
+                        )
+                    )
+            return inconsistencies
+
         eq_order_inconsistent = (
             len(eq_order_range) > 0 and np.max(eq_order_range) > order_limit
         )
@@ -201,49 +249,34 @@ class InconsistentOrderOfMagnitude(Exception):
             len(le_order_range) > 0 and np.max(le_order_range) > order_limit
         )
         if eq_order_inconsistent:
-            resource_inconsistencies = [
-                (
-                    resources[i],
-                    [
-                        (process, eq_matrix[i][j])
-                        for j, process in enumerate(processes)
-                        if eq_matrix[i][j] != 0
-                    ],
-                    v,
-                )
-                for i, v in enumerate(eq_order_range[: len(resources)])
-                if v > order_limit
-            ]
-            eq_inconsistencies = [
-                (
-                    eq_constraints[i],
-                    [
-                        (process, eq_matrix[i + len(processes)][j])
-                        for j, process in enumerate(processes)
-                        if eq_matrix[i + len(processes)][j] != 0
-                    ],
-                    v,
-                )
-                for i, v in enumerate(eq_order_range[len(resources) :])
-                if v > order_limit
-            ]
+            resource_inconsistencies = get_inconsistencies(
+                order_limit,
+                eq_order_range[: len(resources)],
+                resources,
+                processes,
+                eq_matrix,
+            )
+            eq_inconsistencies = get_inconsistencies(
+                order_limit,
+                eq_order_range[len(resources) :],
+                eq_constraints,
+                processes,
+                eq_matrix,
+                matrix_start_row=len(resources),
+            )
+
         else:
             resource_inconsistencies = []
             eq_inconsistencies = []
         if le_order_inconsistent:
-            le_inconsistencies = [
-                (
-                    le_constraints[i],
-                    [
-                        (process, le_matrix[i][j])
-                        for j, process in enumerate(processes)
-                        if le_matrix[i][j] != 0
-                    ],
-                    v,
-                )
-                for i, v in enumerate(le_order_range)
-                if v > order_limit
-            ]
+            le_inconsistencies = get_inconsistencies(
+                order_limit,
+                le_order_range,
+                le_constraints,
+                processes,
+                le_matrix,
+            )
+
         else:
             le_inconsistencies = []
 
