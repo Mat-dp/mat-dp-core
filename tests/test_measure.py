@@ -84,7 +84,9 @@ class TestSolvable:
         )
 
     @pytest.mark.filterwarnings("ignore: A_eq")
-    async def test_simple_dairy_overconstrained(self, farming_example):
+    async def test_simple_dairy_overconstrained_positive(
+        self, farming_example
+    ):
         resources, processes = farming_example
         constraints = [
             EqConstraint("burger_consumption", processes["dairy_farm"], 10),
@@ -94,8 +96,85 @@ class TestSolvable:
         try:
             Measure(resources, processes, constraints, objective=objective)
             assert False
-        except Overconstrained:
-            pass
+        except Overconstrained as e:
+            string_list = str(e).split("\n")
+            assert len(string_list) == 4
+            assert string_list[0] == "Overconstrained problem:"
+            assert string_list[1] == "resources:"
+            assert (
+                string_list[2]
+                == "hay => 179.0: increase runs of dairy_farm or decrease runs of arable_farm"
+            )
+            assert (
+                string_list[3]
+                == "cow => 10.0: increase runs of mcdonalds or decrease runs of dairy_farm"
+            )
+
+    @pytest.mark.filterwarnings("ignore: A_eq")
+    async def test_simple_dairy_overconstrained_negative(
+        self, farming_example
+    ):
+        resources, processes = farming_example
+        constraints = [
+            EqConstraint("burger_consumption", processes["dairy_farm"], 10),
+            EqConstraint("burger_consumption", processes["mcdonalds"], 199),
+        ]
+        objective = processes["arable_farm"]
+        try:
+            Measure(resources, processes, constraints, objective=objective)
+            assert False
+        except Overconstrained as e:
+            string_list = str(e).split("\n")
+            assert len(string_list) == 4
+            assert string_list[0] == "Overconstrained problem:"
+            assert string_list[1] == "resources:"
+            assert (
+                string_list[2]
+                == "hay => -20.0: increase runs of arable_farm or decrease runs of dairy_farm"
+            )
+            assert (
+                string_list[3]
+                == "cow => -189.0: increase runs of dairy_farm or decrease runs of mcdonalds"
+            )
+
+    async def test_simple_dairy_overconstrained_eq_constraints(
+        self, null_example
+    ):
+        resources, processes = null_example
+        constraints = [
+            EqConstraint("burger_consumption", processes["dairy_farm"], 10),
+            EqConstraint("burger_consumption", processes["dairy_farm"], 199),
+        ]
+        objective = processes["arable_farm"]
+        try:
+            Measure(resources, processes, constraints, objective=objective)
+            assert False
+        except Overconstrained as e:
+            string_list = str(e).split("\n")
+            assert len(string_list) == 4
+            assert string_list[0] == "Overconstrained problem:"
+            assert string_list[1] == "eq_constraints:"
+            assert string_list[2] == "dairy_farm == 10 => 10.0"
+            assert string_list[3] == "dairy_farm == 199 => 199.0"
+
+    async def test_simple_dairy_overconstrained_le_constraints(
+        self, null_example
+    ):
+        resources, processes = null_example
+        constraints = [
+            GeConstraint("burger_consumption", processes["dairy_farm"], 10),
+            LeConstraint("burger_consumption", processes["dairy_farm"], 5),
+        ]
+        objective = processes["arable_farm"]
+        try:
+            Measure(resources, processes, constraints, objective=objective)
+            assert False
+        except Overconstrained as e:
+            string_list = str(e).split("\n")
+            assert len(string_list) == 3
+            assert string_list[0] == "Overconstrained problem:"
+            assert string_list[1] == "le_constraints:"
+            assert string_list[2] == "- dairy_farm <= -10 => -10.0"
 
     async def test_simple_dairy_unbounded(self, farming_example):
         resources, processes = farming_example
@@ -107,17 +186,49 @@ class TestSolvable:
         except UnboundedSolution as e:
             messages = str(e).split("\n")
             assert len(messages) == 4
+            assert messages[0] == "Solution unbounded - final solution was:"
             for i in range(3):
                 assert messages[i + 1][-20:] == "(probably unbounded)"
 
+    async def test_simple_dairy_partially_unbounded(
+        self, parallel_farming_example
+    ):
+        resources, processes = parallel_farming_example
+        constraints = [
+            EqConstraint("burger_consumption", processes["mcdonalds"], 10)
+        ]
+        objective = -processes["arable_farm"] - processes["sheep_farm"]
+        try:
+            Measure(resources, processes, constraints, objective=objective)
+            assert False
+        except UnboundedSolution as e:
+            messages = str(e).split("\n")
+        assert len(messages) == 7
+        assert messages[0] == "Solution unbounded - final solution was:"
+        assert messages[1] == "arable_farm: 11.170546563753362"
+        assert messages[2] == "dairy_farm: 5.817627319466408"
+        assert messages[3] == "mcdonalds: 10.0"
+        assert (
+            messages[4]
+            == "field_growth: 29691916331.74252 (probably unbounded)"
+        )
+        assert (
+            messages[5]
+            == "sheep_farm: 29691916331.742508 (probably unbounded)"
+        )
+        assert (
+            messages[6]
+            == "dog_food_factory: 29691916331.742496 (probably unbounded)"
+        )
+
+    @pytest.mark.filterwarnings("ignore")
     async def test_simple_dairy_numerical_difficulties(self, farming_example):
         resources, processes = farming_example
         constraint = EqConstraint(
             "burger_consumption", processes["mcdonalds"], 10
         )
         objective = (
-            processes["arable_farm"]
-            * 10000000000000000000000000000000000000000
+            processes["arable_farm"] * (10 ** 100)
             + processes["dairy_farm"]
             + processes["mcdonalds"]
         )
@@ -126,7 +237,7 @@ class TestSolvable:
         except NumericalDifficulties:
             pass
 
-    async def test_simple_dairy_numerical_difficulties_v2(self):
+    async def test_simple_dairy_inconsistent_order_of_mag_resource(self):
         resources = Resources()
         hay = resources.create("hay")
         cow = resources.create("cow")
@@ -146,13 +257,114 @@ class TestSolvable:
         )
 
         try:
-            res = Measure(
-                resources, processes, [constraint], objective=objective
-            )
-            print(res._run_vector)
+            Measure(resources, processes, [constraint], objective=objective)
             assert False
-        except InconsistentOrderOfMagnitude:
-            pass
+        except InconsistentOrderOfMagnitude as e:
+            messages = [i for i in str(e).split("\n") if i != ""]
+            assert len(messages) == 7
+            assert messages[0] == "All resources and constraints must be of a "
+            assert (
+                messages[1]
+                == "consistent order of magnitude. If you wish to allow this "
+            )
+            assert (
+                messages[2]
+                == "behaviour use 'allow_inconsistent_order_of_mag'."
+            )
+            assert messages[3] == "Resource inconsistencies"
+            assert messages[4] == "hay: Order of mag range: 7.301029995663981"
+            assert messages[5] == "    arable_farm: 1.0"
+            assert messages[6] == "    dairy_farm: -20000000.0"
+
+    async def test_simple_dairy_inconsistent_order_of_mag_eq_con(self):
+        resources = Resources()
+        hay = resources.create("hay")
+        cow = resources.create("cow")
+
+        processes = Processes()
+        processes.create("arable_farm", (hay, +1))
+        processes.create("dairy_farm", (cow, +1), (hay, -20))
+        processes.create("mcdonalds", (cow, -1))
+
+        constraint = EqConstraint(
+            "burger_consumption",
+            processes["mcdonalds"]
+            + 1000000000000000 * processes["arable_farm"],
+            10,
+        )
+        objective = (
+            processes["arable_farm"]
+            + processes["dairy_farm"]
+            + processes["mcdonalds"]
+        )
+
+        try:
+            Measure(resources, processes, [constraint], objective=objective)
+            assert False
+        except InconsistentOrderOfMagnitude as e:
+            messages = [i for i in str(e).split("\n") if i != ""]
+            assert len(messages) == 7
+            assert messages[0] == "All resources and constraints must be of a "
+            assert (
+                messages[1]
+                == "consistent order of magnitude. If you wish to allow this "
+            )
+            assert (
+                messages[2]
+                == "behaviour use 'allow_inconsistent_order_of_mag'."
+            )
+            assert messages[3] == "Eq Constraint inconsistencies"
+            assert (
+                messages[4]
+                == "mcdonalds + 1000000000000000*arable_farm == 10: Order of mag range - 15.0"
+            )
+            assert messages[5] == "    arable_farm: 1.0"
+            assert messages[6] == "    mcdonalds: 0.0"
+
+    async def test_simple_dairy_inconsistent_order_of_mag_le_con(self):
+        resources = Resources()
+        hay = resources.create("hay")
+        cow = resources.create("cow")
+
+        processes = Processes()
+        processes.create("arable_farm", (hay, +1))
+        processes.create("dairy_farm", (cow, +1), (hay, -20))
+        processes.create("mcdonalds", (cow, -1))
+
+        constraint = LeConstraint(
+            "burger_consumption",
+            processes["mcdonalds"]
+            + 1000000000000000 * processes["arable_farm"],
+            10,
+        )
+        objective = (
+            processes["arable_farm"]
+            + processes["dairy_farm"]
+            + processes["mcdonalds"]
+        )
+
+        try:
+            Measure(resources, processes, [constraint], objective=objective)
+            assert False
+        except InconsistentOrderOfMagnitude as e:
+            messages = [i for i in str(e).split("\n") if i != ""]
+            assert len(messages) == 7
+            assert messages[0] == "All resources and constraints must be of a "
+            assert (
+                messages[1]
+                == "consistent order of magnitude. If you wish to allow this "
+            )
+            assert (
+                messages[2]
+                == "behaviour use 'allow_inconsistent_order_of_mag'."
+            )
+            assert messages[3] == "Le Constraint inconsistencies"
+            assert (
+                messages[4]
+                == "mcdonalds + 1000000000000000*arable_farm <= 10: Order of mag range - 15.0"
+            )
+            assert messages[5] == "    arable_farm: 1000000000000000.0"
+            assert messages[6] == "    mcdonalds: 1.0"
 
 
 @pytest.mark.asyncio

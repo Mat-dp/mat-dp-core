@@ -178,28 +178,29 @@ class InconsistentOrderOfMagnitude(Exception):
                     f"{resource}: Order of mag range: {order_range}"
                 )
                 for process, process_demand in process_list:
-                    message_list.append(f"{process}: {process_demand}")
+                    message_list.append(f"    {process}: {process_demand}")
                 message_list.append("\n")
             message_list.append("\n")
 
         if len(eq_constraints) > 0:
             message_list.append("Eq Constraint inconsistencies")
-            for eq_constraint, process_list, order_range in resources:
+            for eq_constraint, process_list, order_range in eq_constraints:
                 message_list.append(
                     f"{eq_constraint}: Order of mag range - {order_range}"
                 )
                 for process, process_demand in process_list:
-                    message_list.append(f"{process}: {process_demand}")
+                    message_list.append(f"    {process}: {process_demand}")
                 message_list.append("\n")
 
         if len(le_constraints) > 0:
             message_list.append("Le Constraint inconsistencies")
-            for le_constraint, process_list, order_range in resources:
+
+            for le_constraint, process_list, order_range in le_constraints:
                 message_list.append(
                     f"{le_constraint}: Order of mag range - {order_range}"
                 )
                 for process, process_demand in process_list:
-                    message_list.append(f"{process}: {process_demand}")
+                    message_list.append(f"    {process}: {process_demand}")
                 message_list.append("\n")
         super().__init__("\n".join(message_list))
 
