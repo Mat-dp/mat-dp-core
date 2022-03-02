@@ -1,9 +1,9 @@
-from typing import Any, List, Sequence, Tuple, Union
+from typing import Any, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
 from .constraints import EqConstraint, LeConstraint
-from .processes import Process, Processes
+from .processes import Process, Processes, ProcessExpr
 from .resources import Resource, Resources
 
 
@@ -160,6 +160,7 @@ class NumericalDifficulties(Exception):
 class InconsistentOrderOfMagnitude(Exception):
     def __init__(
         self,
+        objective: Optional[Tuple[ProcessExpr, float]],
         resources: List[Tuple[Resource, List[Tuple[Process, float]], float]],
         eq_constraints: List[
             Tuple[EqConstraint, List[Tuple[Process, float]], float]
@@ -171,6 +172,12 @@ class InconsistentOrderOfMagnitude(Exception):
         message_list = [
             "\nAll resources and constraints must be of a \nconsistent order of magnitude. If you wish to allow this \nbehaviour use 'allow_inconsistent_order_of_mag'.\n"
         ]
+        if objective is not None:
+            message_list.append("Objective function inconsistencies")
+            message_list.append(
+                f"Objective func: {objective[0]}: Order of mag range: {objective[1]}"
+            )
+            message_list.append("\n")
         if len(resources) > 0:
             message_list.append("Resource inconsistencies")
             for resource, process_list, order_range in resources:
@@ -208,10 +215,12 @@ class InconsistentOrderOfMagnitude(Exception):
     def from_complex_objects(
         cls,
         order_limit: float,
+        coeff_order_range: float,
         eq_order_range: np.ndarray,
         le_order_range: np.ndarray,
         resources: Resources,
         processes: Processes,
+        objective: ProcessExpr,
         eq_constraints: List[EqConstraint],
         le_constraints: List[LeConstraint],
         eq_matrix: np.ndarray,
@@ -243,12 +252,17 @@ class InconsistentOrderOfMagnitude(Exception):
                     )
             return inconsistencies
 
+        coeff_order_inconsistent = coeff_order_range > order_limit
         eq_order_inconsistent = (
             len(eq_order_range) > 0 and np.max(eq_order_range) > order_limit
         )
         le_order_inconsistent = (
             len(le_order_range) > 0 and np.max(le_order_range) > order_limit
         )
+        if coeff_order_inconsistent:
+            optional_objective = (objective, coeff_order_range)
+        else:
+            optional_objective = None
         if eq_order_inconsistent:
             resource_inconsistencies = get_inconsistencies(
                 order_limit,
@@ -282,6 +296,7 @@ class InconsistentOrderOfMagnitude(Exception):
             le_inconsistencies = []
 
         return cls(
+            optional_objective,
             resource_inconsistencies,
             eq_inconsistencies,
             le_inconsistencies,

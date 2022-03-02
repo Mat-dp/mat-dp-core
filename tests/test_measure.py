@@ -221,6 +221,8 @@ class TestSolvable:
             == "dog_food_factory: 29691916331.742496 (probably unbounded)"
         )
 
+    """
+    TODO: Find a numerical difficulties test
     @pytest.mark.filterwarnings("ignore")
     async def test_simple_dairy_numerical_difficulties(self, farming_example):
         resources, processes = farming_example
@@ -228,14 +230,62 @@ class TestSolvable:
             "burger_consumption", processes["mcdonalds"], 10
         )
         objective = (
-            processes["arable_farm"] * (10 ** 100)
-            + processes["dairy_farm"]
-            + processes["mcdonalds"]
+            processes["arable_farm"] * (10 ** 50)
+            + processes["dairy_farm"] * (10 ** 10)
+            + processes["mcdonalds"] * (10 ** 20)
+        )
+        try:
+            res = Measure(resources, processes, [constraint], objective=objective, allow_inconsistent_order_of_mag=True)
+            assert False
+        except NumericalDifficulties:
+            pass
+    """
+
+    async def test_simple_dairy_large_objective(self, farming_example):
+        resources, processes = farming_example
+        constraint = EqConstraint(
+            "burger_consumption", processes["mcdonalds"], 10
+        )
+        objective = (
+            processes["arable_farm"] * (10 ** 50)
+            + processes["dairy_farm"] * (10 ** 52)
+            + processes["mcdonalds"] * (10 ** 49)
+        )
+
+        Measure(resources, processes, [constraint], objective=objective)
+
+    async def test_simple_dairy_inconsistent_order_of_mag_coeff(
+        self, farming_example
+    ):
+        resources, processes = farming_example
+        constraint = EqConstraint(
+            "burger_consumption", processes["mcdonalds"], 10
+        )
+        objective = (
+            processes["arable_farm"] * (10 ** 20)
+            + processes["dairy_farm"] * (10 ** 1)
+            + processes["mcdonalds"] * (10 ** 2)
         )
         try:
             Measure(resources, processes, [constraint], objective=objective)
-        except NumericalDifficulties:
-            pass
+            assert False
+        except InconsistentOrderOfMagnitude as e:
+            messages = [i for i in str(e).split("\n") if i != ""]
+            assert len(messages) == 5
+            assert messages[0] == "All resources and constraints must be of a "
+            assert (
+                messages[1]
+                == "consistent order of magnitude. If you wish to allow this "
+            )
+            assert (
+                messages[2]
+                == "behaviour use 'allow_inconsistent_order_of_mag'."
+            )
+            assert messages[3] == "Objective function inconsistencies"
+            assert (
+                messages[4]
+                == "Objective func: 100000000000000000000*arable_farm + 10*dairy_farm + 100*mcdonalds: Order of mag range: 19.0"
+            )
 
     async def test_simple_dairy_inconsistent_order_of_mag_resource(self):
         resources = Resources()

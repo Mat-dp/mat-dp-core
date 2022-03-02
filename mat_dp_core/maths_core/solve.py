@@ -113,33 +113,43 @@ def solve(
         options["maxiter"] = maxiter
 
     if not allow_inconsistent_order_of_mag:
+        coeff_order_range: float = get_order_ranges(np.array([coefficients]))[
+            0
+        ]
         eq_order_range = get_order_ranges(eq_equations)
         le_order_range = get_order_ranges(le_equations)
         order_limit = 6
+        coeff_order_inconsistent = coeff_order_range > order_limit
         eq_order_inconsistent = (
             len(eq_order_range) > 0 and np.max(eq_order_range) > order_limit
         )
         le_order_inconsistent = (
             len(le_order_range) > 0 and np.max(le_order_range) > order_limit
         )
-        if eq_order_inconsistent or le_order_inconsistent:
+        if (
+            coeff_order_inconsistent
+            or eq_order_inconsistent
+            or le_order_inconsistent
+        ):
             raise InconsistentOrderOfMagnitude.from_complex_objects(
                 order_limit=order_limit,
+                coeff_order_range=coeff_order_range,
                 eq_order_range=eq_order_range,
                 le_order_range=le_order_range,
                 resources=resources,
                 processes=processes,
+                objective=new_objective,
                 eq_constraints=eq_constraints,
                 le_constraints=le_constraints,
                 eq_matrix=A_eq,
                 le_matrix=A_le,
             )
-
+    coeff_scale = get_row_scales(np.array([coefficients]))[0]
     eq_scales = get_row_scales(eq_equations)
     le_scales = get_row_scales(le_equations)
 
     res = linprog(
-        c=coefficients,
+        c=coefficients * coeff_scale,
         A_ub=np.einsum("ij, i -> ij", A_le, le_scales),
         b_ub=np.einsum("i, i -> i", b_le, le_scales),
         A_eq=np.einsum("ij, i -> ij", A_eq, eq_scales),
