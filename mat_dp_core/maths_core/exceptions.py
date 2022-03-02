@@ -153,10 +153,6 @@ class UnboundedSolution(Exception):
         super().__init__("\n".join(message_list))
 
 
-class NumericalDifficulties(Exception):
-    pass
-
-
 class InconsistentOrderOfMagnitude(Exception):
     def __init__(
         self,

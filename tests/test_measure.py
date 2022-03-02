@@ -11,7 +11,6 @@ from mat_dp_core import (
 )
 from mat_dp_core.maths_core.exceptions import (
     InconsistentOrderOfMagnitude,
-    NumericalDifficulties,
     Overconstrained,
     UnboundedSolution,
 )
@@ -220,26 +219,6 @@ class TestSolvable:
             messages[6]
             == "dog_food_factory: 29691916331.742496 (probably unbounded)"
         )
-
-    """
-    TODO: Find a numerical difficulties test
-    @pytest.mark.filterwarnings("ignore")
-    async def test_simple_dairy_numerical_difficulties(self, farming_example):
-        resources, processes = farming_example
-        constraint = EqConstraint(
-            "burger_consumption", processes["mcdonalds"], 10
-        )
-        objective = (
-            processes["arable_farm"] * (10 ** 50)
-            + processes["dairy_farm"] * (10 ** 10)
-            + processes["mcdonalds"] * (10 ** 20)
-        )
-        try:
-            res = Measure(resources, processes, [constraint], objective=objective, allow_inconsistent_order_of_mag=True)
-            assert False
-        except NumericalDifficulties:
-            pass
-    """
 
     async def test_simple_dairy_large_objective(self, farming_example):
         resources, processes = farming_example

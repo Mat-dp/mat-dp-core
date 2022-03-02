@@ -14,7 +14,6 @@ from .constraints import (
 from .exceptions import (
     InconsistentOrderOfMagnitude,
     IterationLimitReached,
-    NumericalDifficulties,
     Overconstrained,
     UnboundedSolution,
 )
@@ -156,7 +155,7 @@ def solve(
         b_eq=np.einsum("i, i -> i", b_eq, eq_scales),
         options=options,
     )
-    assert res.status in [0, 1, 2, 3, 4]
+    assert res.status in [0, 1, 2, 3]
     if res.status == 0:  # Optimization terminated successfully
         return res.x
     elif res.status == 1:  # Iteration limit reached
@@ -178,10 +177,8 @@ def solve(
             le_constraints=le_constraints,
         )
 
-    elif res.status == 3:  # Problem appears to be unbounded
+    else:  # Problem appears to be unbounded
         process_sols = [
             (process, res.x[process.index]) for process in processes
         ]
         raise UnboundedSolution(process_sols)
-    else:  # Numerical difficulties encountered
-        raise NumericalDifficulties

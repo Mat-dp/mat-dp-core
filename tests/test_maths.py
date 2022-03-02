@@ -8,7 +8,6 @@ from mat_dp_core import Measure
 class TestNull:
     async def test_run_vector(self, null_example_measure: Measure):
         run_vector = null_example_measure._run_vector
-        print(run_vector)
         assert np.array_equal(
             np.round(run_vector, decimals=3),
             np.array(
