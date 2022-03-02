@@ -412,8 +412,6 @@ class Measure:
             return output
         elif isinstance(arg1, Process) and arg2 is not None and arg3 is None:
             output = []
-            if arg1.index == arg2.index:
-                raise ValueError(f"Same process {arg1.name} supplied")
             for r in self._resources:
                 output.append(
                     (
@@ -425,8 +423,6 @@ class Measure:
         else:
             assert arg1 is not None and arg2 is not None and arg3 is not None
             assert isinstance(arg1, Process)
-            if arg1.index == arg2.index:
-                raise ValueError(f"Same process {arg1.name} supplied")
             return self.flow_matrix[arg3.index][arg1.index][arg2.index]
 
     @overload
