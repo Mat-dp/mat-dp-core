@@ -7,7 +7,7 @@ from mat_dp_core import Measure
 @pytest.mark.asyncio
 class TestNull:
     async def test_run_vector(self, null_example_measure: Measure):
-        run_vector = null_example_measure._run_vector
+        run_vector = null_example_measure.run_vector
         assert np.array_equal(
             np.round(run_vector, decimals=3),
             np.array(
@@ -59,7 +59,7 @@ class TestNull:
 @pytest.mark.asyncio
 class TestFarming:
     async def test_run_vector(self, farming_example_measure: Measure):
-        run_vector = farming_example_measure._run_vector
+        run_vector = farming_example_measure.run_vector
         assert np.array_equal(
             np.round(run_vector, decimals=3),
             np.array(
@@ -111,7 +111,7 @@ class TestFarming:
 @pytest.mark.asyncio
 class TestPizza:
     async def test_run_vector(self, pizza_example_measure: Measure):
-        run_vector = pizza_example_measure._run_vector
+        run_vector = pizza_example_measure.run_vector
         assert np.array_equal(
             np.round(run_vector, decimals=3),
             np.array(
@@ -202,7 +202,7 @@ class TestPizza:
 @pytest.mark.asyncio
 class TestParallelFarming:
     async def test_run_vector(self, parallel_farming_example_measure: Measure):
-        run_vector = parallel_farming_example_measure._run_vector
+        run_vector = parallel_farming_example_measure.run_vector
         assert np.array_equal(
             np.round(run_vector, decimals=3),
             np.array(
@@ -296,7 +296,7 @@ class TestParallelFarming:
 @pytest.mark.asyncio
 class TestReal:
     async def test_run_vector(self, real_example_measure: Measure):
-        run_vector = real_example_measure._run_vector
+        run_vector = real_example_measure.run_vector
         assert np.array_equal(
             np.round(run_vector, decimals=3),
             np.array(

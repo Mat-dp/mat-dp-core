@@ -214,13 +214,103 @@ def construct_cumulative_resource_matrix(
     return np.einsum("ij, kj -> ki", process_process_matrix, production_matrix)
 
 
-class Measure:
+class Solver:
     _resources: Resources
     _processes: Processes
-    _run_vector: ndarray  # processes
+    run_vector: ndarray  # processes
     _resource_matrix: Optional[ndarray]  # (resource, process)
     _flow_matrix: Optional[ndarray]  # (resource, process, process)
     _cumulative_resource_matrix: Optional[ndarray]  # (resource, process)
+
+    def __init__(
+        self,
+        resources: Resources,
+        processes: Processes,
+        constraints: Union[
+            List[Union[EqConstraint, LeConstraint]],
+            List[EqConstraint],
+            List[LeConstraint],
+        ],
+        use_process_bounds: bool,
+        objective: Optional[ProcessExpr] = None,
+        maxiter: Optional[int] = None,
+        allow_inconsistent_order_of_mag: bool = False,
+    ):
+        self._resources = resources
+        self._processes = processes
+        self._allow_inconsistent_order_of_mag = allow_inconsistent_order_of_mag
+        self.run_vector = solve(
+            resources=resources,
+            processes=processes,
+            use_process_bounds=use_process_bounds,
+            constraints=constraints,
+            objective=objective,
+            maxiter=maxiter,
+            allow_inconsistent_order_of_mag=self._allow_inconsistent_order_of_mag,
+        )
+        self._resource_matrix = None
+        self._flow_matrix = None
+        self._cumulative_resource_matrix = None
+
+    @property
+    def resource_matrix(self):
+        if self._resource_matrix is None:
+            self._resource_matrix = construct_resource_matrix(
+                self._processes.process_produces, self.run_vector
+            )
+        return self._resource_matrix
+
+    @property
+    def flow_matrix(self):
+        if self._flow_matrix is None:
+            self._flow_matrix = construct_flow_matrix(self.resource_matrix)
+        return self._flow_matrix
+
+    @property
+    def cumulative_resource_matrix(self):
+        if self._cumulative_resource_matrix is None:
+            self._cumulative_resource_matrix = (
+                construct_cumulative_resource_matrix(
+                    self._resources,
+                    self._processes,
+                    self.run_vector,
+                    self._allow_inconsistent_order_of_mag,
+                )
+            )
+        return self._cumulative_resource_matrix
+
+
+def bound_resource_matrix_from_solvers(
+    solvers: List[Tuple[Process, Solver]]
+) -> ndarray:
+    # TODO Implement
+    raise NotImplementedError
+
+
+def bound_flow_matrix_from_solvers(
+    solvers: List[Tuple[Process, Solver]]
+) -> ndarray:
+    # TODO Implement
+    raise NotImplementedError
+
+
+def bound_cumulative_resource_matrix_from_solvers(
+    solvers: List[Tuple[Process, Solver]]
+) -> ndarray:
+    # TODO Implement
+    raise NotImplementedError
+
+
+class BoundedSolver(Solver):
+    run_vector_lb: ndarray
+    run_vector_ub: ndarray
+    _resource_matrix_lb: Optional[ndarray]  # (resource, process)
+    _resource_matrix_ub: Optional[ndarray]  # (resource, process)
+    _flow_matrix_lb: Optional[ndarray]  # (resource, process, process)
+    _flow_matrix_ub: Optional[ndarray]  # (resource, process, process)
+    _cumulative_resource_matrix: Optional[ndarray]  # (resource, process)
+    _lower_solvers: Optional[List[Tuple[Process, Solver]]]
+    _upper_solvers: Optional[List[Tuple[Process, Solver]]]
 
     def __init__(
         self,
@@ -235,23 +325,156 @@ class Measure:
         maxiter: Optional[int] = None,
         allow_inconsistent_order_of_mag: bool = False,
     ):
-
         self._resources = resources
         self._processes = processes
         self._allow_inconsistent_order_of_mag = allow_inconsistent_order_of_mag
-        self._run_vector = solve(
-            resources=resources,
-            processes=processes,
+
+        self._resource_matrix = None
+        self._resource_matrix_lb = None
+        self._resource_matrix_ub = None
+        self._flow_matrix = None
+        self._flow_matrix_lb = None
+        self._flow_matrix_ub = None
+        self._cumulative_resource_matrix = None
+        self._cumulative_resource_matrix_lb = None
+        self._cumulative_resource_matrix_ub = None
+
+        self._exact_solver = Solver(
+            resources,
+            processes,
+            constraints,
             use_process_bounds=False,
-            constraints=constraints,
             objective=objective,
             maxiter=maxiter,
             allow_inconsistent_order_of_mag=self._allow_inconsistent_order_of_mag,
         )
-        self._resource_matrix = None
-        self._flow_matrix = None
-        self._cumulative_resource_matrix = None
+        self.run_vector = self._exact_solver.run_vector
+        if processes._calculate_bounds:
+            lower_solvers = []
+            upper_solvers = []
+            for process in processes:
+                lower_solver = Solver(
+                    resources,
+                    processes,
+                    constraints,
+                    use_process_bounds=True,
+                    objective=process * 1,
+                    maxiter=maxiter,
+                    allow_inconsistent_order_of_mag=self._allow_inconsistent_order_of_mag,
+                )
+                upper_solver = Solver(
+                    resources,
+                    processes,
+                    constraints,
+                    use_process_bounds=True,
+                    objective=-process * 1,
+                    maxiter=maxiter,
+                    allow_inconsistent_order_of_mag=self._allow_inconsistent_order_of_mag,
+                )
+                lower_solvers.append((process, lower_solver))
+                upper_solvers.append((process, upper_solver))
+            self._lower_solvers = lower_solvers
+            self._upper_solvers = upper_solvers
+        else:
+            self._lower_solvers = None
+            self._upper_solvers = None
 
+    @property
+    def resource_matrix(self):
+        if self._resource_matrix is None:
+            self._resource_matrix = self._exact_solver.resource_matrix
+        return self._resource_matrix
+
+    @property
+    def resource_matrix_lb(self):
+        if self._resource_matrix_lb is None:
+            if self._lower_solvers is None:
+                self._resource_matrix_lb = self._exact_solver.resource_matrix
+            else:
+                self._resource_matrix_lb = bound_resource_matrix_from_solvers(
+                    self._lower_solvers
+                )
+        return self._resource_matrix_lb
+
+    @property
+    def resource_matrix_ub(self):
+        if self._resource_matrix_ub is None:
+            if self._upper_solvers is None:
+                self._resource_matrix_ub = self._exact_solver.resource_matrix
+            else:
+                self._resource_matrix_ub = bound_resource_matrix_from_solvers(
+                    self._upper_solvers
+                )
+        return self._resource_matrix_ub
+
+    @property
+    def flow_matrix(self):
+        if self._flow_matrix is None:
+            self._flow_matrix = self._exact_solver.flow_matrix
+        return self._flow_matrix
+
+    @property
+    def flow_matrix_lb(self):
+        if self._flow_matrix_lb is None:
+            if self._lower_solvers is None:
+                self._flow_matrix_lb = self._exact_solver.flow_matrix
+            else:
+                self._flow_matrix_lb = bound_flow_matrix_from_solvers(
+                    self._lower_solvers
+                )
+        return self._flow_matrix_lb
+
+    @property
+    def flow_matrix_ub(self):
+        if self._flow_matrix_ub is None:
+            if self._upper_solvers is None:
+                self._flow_matrix_ub = self._exact_solver.flow_matrix
+            else:
+                self._flow_matrix_ub = bound_flow_matrix_from_solvers(
+                    self._upper_solvers
+                )
+        return self._flow_matrix_ub
+
+    @property
+    def cumulative_resource_matrix(self):
+        if self._cumulative_resource_matrix is None:
+            self._cumulative_resource_matrix = (
+                self._exact_solver.cumulative_resource_matrix
+            )
+        return self._cumulative_resource_matrix
+
+    @property
+    def cumulative_resource_matrix_lb(self):
+        if self._cumulative_resource_matrix_lb is None:
+            if self._lower_solvers is None:
+                self._cumulative_resource_matrix_lb = (
+                    self._exact_solver.cumulative_resource_matrix
+                )
+            else:
+                self._cumulative_resource_matrix_lb = (
+                    bound_cumulative_resource_matrix_from_solvers(
+                        self._lower_solvers
+                    )
+                )
+        return self._cumulative_resource_matrix_lb
+
+    @property
+    def cumulative_resource_matrix_ub(self):
+        if self._cumulative_resource_matrix_ub is None:
+            if self._upper_solvers is None:
+                self._cumulative_resource_matrix_ub = (
+                    self._exact_solver.cumulative_resource_matrix
+                )
+            else:
+                self._cumulative_resource_matrix_ub = (
+                    bound_cumulative_resource_matrix_from_solvers(
+                        self._upper_solvers
+                    )
+                )
+        return self._cumulative_resource_matrix_ub
+
+
+class Measure(BoundedSolver):
     @overload
     def run(self) -> Sequence[Tuple[Process, float]]:
         ...
@@ -264,17 +487,9 @@ class Measure:
         self, process: Optional[Process] = None
     ) -> Union[Sequence[Tuple[Process, float]], float]:
         if process is None:
-            return list(zip(self._processes, self._run_vector))
+            return list(zip(self._processes, self.run_vector))
         else:
-            return self._run_vector[process.index]
-
-    @property
-    def resource_matrix(self):
-        if self._resource_matrix is None:
-            self._resource_matrix = construct_resource_matrix(
-                self._processes.process_produces, self._run_vector
-            )
-        return self._resource_matrix
+            return self.run_vector[process.index]
 
     @overload
     def resource(self) -> Sequence[Tuple[Process, Resource, float]]:
@@ -327,12 +542,6 @@ class Measure:
             self._processes,
             (arg1, arg2),
         )
-
-    @property
-    def flow_matrix(self):
-        if self._flow_matrix is None:
-            self._flow_matrix = construct_flow_matrix(self.resource_matrix)
-        return self._flow_matrix
 
     @overload
     def flow(self) -> Sequence[Tuple[Process, Process, Resource, float]]:
@@ -516,19 +725,6 @@ class Measure:
                 process.index,
                 flow_from=False,
             )
-
-    @property
-    def cumulative_resource_matrix(self):
-        if self._cumulative_resource_matrix is None:
-            self._cumulative_resource_matrix = (
-                construct_cumulative_resource_matrix(
-                    self._resources,
-                    self._processes,
-                    self._run_vector,
-                    self._allow_inconsistent_order_of_mag,
-                )
-            )
-        return self._cumulative_resource_matrix
 
     @overload
     def cumulative_resource(self) -> Sequence[Tuple[Process, Resource, float]]:

@@ -66,7 +66,7 @@ class TestSolvable:
             resources, processes, [constraint], objective=objective
         )
         assert np.array_equal(
-            np.round(solution._run_vector, 3), np.array([20, 10, 10])
+            np.round(solution.run_vector, 3), np.array([20, 10, 10])
         )
 
     async def test_simple_dairy_new_objective(self, farming_example):
@@ -79,7 +79,7 @@ class TestSolvable:
             resources, processes, [constraint], objective=objective
         )
         assert np.array_equal(
-            np.round(solution._run_vector, 3), np.array([20, 10, 10])
+            np.round(solution.run_vector, 3), np.array([20, 10, 10])
         )
 
     @pytest.mark.filterwarnings("ignore: A_eq")
