@@ -17,6 +17,12 @@ class TestSolveErrors:
             EqConstraint("burger_consumption", processes["dairy_farm"], 10)
         ]
         try:
-            solve(resources, processes, constraints, maxiter=1)
+            solve(
+                resources,
+                processes,
+                use_process_bounds=False,
+                constraints=constraints,
+                maxiter=1,
+            )
         except IterationLimitReached as e:
             assert str(e) == "Iteration limit reached with 1 iterations"

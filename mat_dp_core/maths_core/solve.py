@@ -1,5 +1,5 @@
 from functools import reduce
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 from numpy import ndarray
@@ -22,10 +22,80 @@ from .resources import Resources
 from .tools import get_order_ranges, get_row_scales
 
 
+def constraints_to_array(
+    processes: Processes,
+    constraints: List[_Constraint],
+) -> Tuple[ndarray, ndarray]:
+    """
+    Converts a list of constraints to array format.
+
+    returns the tuple of A matrix and b vector forming an equation
+    """
+    A_constraint_array = np.zeros((len(constraints), len(processes)))
+    b_constraint_array = np.zeros((len(constraints)))
+
+    for i, constraint in enumerate(constraints):
+        constraint.array.resize(len(processes), refcheck=False)
+        A_constraint_array[i] = constraint.array
+        b_constraint_array[i] = constraint.bound
+
+    return A_constraint_array, b_constraint_array
+
+
+def sort_constraints(
+    constraints: Union[
+        List[Union[EqConstraint, LeConstraint]],
+        List[EqConstraint],
+        List[LeConstraint],
+    ]
+) -> Tuple[List[EqConstraint], List[LeConstraint]]:
+    eq_constraints = [
+        constraint
+        for constraint in constraints
+        if isinstance(constraint, EqConstraint)
+    ]
+    le_constraints = [
+        constraint
+        for constraint in constraints
+        if isinstance(constraint, LeConstraint)
+    ]
+    return eq_constraints, le_constraints
+
+
+def get_associated_matrices_bounded(
+    resources, processes, eq_constraints, le_constraints
+) -> Tuple[ndarray, ndarray, ndarray, ndarray]:
+    process_lower_bounds = processes.process_produces_lb
+    process_upper_bounds = processes.process_produces_ub
+    A_eq, b_eq = constraints_to_array(processes, list(eq_constraints))
+
+    A_le_con, b_le_con = constraints_to_array(processes, list(le_constraints))
+    A_le = np.concatenate(
+        (process_lower_bounds, -process_upper_bounds, A_le_con)
+    )
+    b_le = np.concatenate((np.zeros(len(resources) * 2), b_le_con))
+    return A_eq, b_eq, A_le, b_le
+
+
+def get_associated_matrices(
+    resources, processes, eq_constraints, le_constraints
+) -> Tuple[ndarray, ndarray, ndarray, ndarray]:
+    A_eq_con, b_eq_con = constraints_to_array(processes, list(eq_constraints))
+    A_eq = np.concatenate((processes.process_produces, A_eq_con))
+    b_eq = np.concatenate((np.zeros(len(resources)), b_eq_con))
+    A_le, b_le = constraints_to_array(processes, list(le_constraints))
+    return A_eq, b_eq, A_le, b_le
+
+
 def solve(
     resources: Resources,
     processes: Processes,
-    constraints: Sequence[Union[EqConstraint, LeConstraint]] = [],
+    use_process_bounds: bool,
+    constraints: Union[
+        List[Union[EqConstraint, LeConstraint]],
+        List[EqConstraint],
+        List[LeConstraint],
+    ] = [],
     objective: Optional[ProcessExpr] = None,
     maxiter: Optional[int] = None,
     allow_inconsistent_order_of_mag: bool = False,
@@ -40,25 +110,6 @@ def solve(
         *constraints* reference only processes in *processes*
         *processes* reference only resources in *resources*
     """
-
-    def constraints_to_array(
-        constraints: List[_Constraint],
-    ) -> Tuple[ndarray, ndarray]:
-        """
-        Converts a list of constraints to array format.
-
-        returns the tuple of A matrix and b vector forming an equation
-        """
-        A_constraint_array = np.zeros((len(constraints), len(processes)))
-        b_constraint_array = np.zeros((len(constraints)))
-
-        for i, constraint in enumerate(constraints):
-            constraint.array.resize(len(processes), refcheck=False)
-            A_constraint_array[i] = constraint.array
-            b_constraint_array[i] = constraint.bound
-
-        return A_constraint_array, b_constraint_array
-
     if len(resources) == 0 and len(processes) == 0:
         raise ValueError("No resources or processes created")
     elif len(resources) == 0:
@@ -79,22 +130,16 @@ def solve(
     coefficients.resize(len(processes), refcheck=False)
     # TODO: Add Inconsistent order of mag check on coefficients
 
-    eq_constraints = [
-        constraint
-        for constraint in constraints
-        if isinstance(constraint, EqConstraint)
-    ]
-    le_constraints = [
-        constraint
-        for constraint in constraints
-        if isinstance(constraint, LeConstraint)
-    ]
+    eq_constraints, le_constraints = sort_constraints(constraints)
 
-    A_eq_con, b_eq_con = constraints_to_array(list(eq_constraints))
-    A_eq = np.concatenate((processes.process_produces, A_eq_con))
-    b_eq = np.concatenate((np.zeros(len(resources)), b_eq_con))
-
-    A_le, b_le = constraints_to_array(list(le_constraints))
+    if use_process_bounds:
+        A_eq, b_eq, A_le, b_le = get_associated_matrices_bounded(
+            resources, processes, eq_constraints, le_constraints
+        )
+    else:
+        A_eq, b_eq, A_le, b_le = get_associated_matrices(
+            resources, processes, eq_constraints, le_constraints
+        )
 
     eq_equations = np.concatenate(
         (A_eq, np.resize(b_eq, (len(b_eq), 1))), axis=1
@@ -143,6 +188,7 @@ def solve(
                 eq_matrix=A_eq,
                 le_matrix=A_le,
             )
+
     coeff_scale = get_row_scales(np.array([coefficients]))[0]
     eq_scales = get_row_scales(eq_equations)
     le_scales = get_row_scales(le_equations)

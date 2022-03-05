@@ -115,6 +115,14 @@ class Process:
     def array(self) -> ndarray:
         return self._parent._processes[self.index][1]
 
+    @property
+    def lb_array(self) -> ndarray:
+        return self._parent._processes[self.index][2]
+
+    @property
+    def ub_array(self) -> ndarray:
+        return self._parent._processes[self.index][3]
+
     def __mul__(self, other: float) -> ProcessExpr:
         new_proc = copy(self)
         new_proc.multiplier *= other
@@ -164,16 +172,18 @@ CreateType = Union[
 
 class Processes:
     # Maps process names to resource demands
-    _processes: MutableSequence[
-        Tuple[ProcessName, ndarray, Optional[ndarray], Optional[ndarray]]
-    ]
+    _processes: MutableSequence[Tuple[ProcessName, ndarray, ndarray, ndarray]]
     _process_produces: Optional[ndarray]  # (resources, processes)
     _process_lower_bounds: Optional[ndarray]  # (resources, processes)
     _process_upper_bounds: Optional[ndarray]  # (resources, processes)
+    _calculate_bounds: bool
 
     def __init__(self) -> None:
         self._processes = []
         self._process_produces = None
+        self._process_lower_bounds = None
+        self._process_upper_bounds = None
+        self._calculate_bounds = False
 
     def create(self, name: ProcessName, *resources: CreateType) -> Process:
         if len(resources) == 0:
@@ -182,21 +192,20 @@ class Processes:
             max([resource.index for (resource, _) in resources]) + 1
         )
         produces_array = np.zeros(res_max_index)
-        lb_array = None
-        ub_array = None
+        lb_array = np.zeros(res_max_index)
+        ub_array = np.zeros(res_max_index, dtype=object)
         for resource, item in resources:
             i = resource.index
             if isinstance(item, tuple):
-                if lb_array is None:
-                    lb_array = np.zeros(res_max_index, dtype=object)
-                if ub_array is None:
-                    ub_array = np.zeros(res_max_index, dtype=object)
-                produces = item[0]
+                if not self._calculate_bounds:
+                    self._calculate_bounds = True
+                produces_array[i] = item[0]
                 lb_array[i] = item[1]
                 ub_array[i] = item[2]
             else:
-                produces = item
-            produces_array[i] = produces
+                produces_array[i] = item
+                lb_array[i] = item
+                ub_array[i] = item
 
         process_inner = (name, produces_array, lb_array, ub_array)
         self._processes.append(process_inner)
@@ -268,12 +277,36 @@ class Processes:
     def process_produces(self) -> ndarray:
         if self._process_produces is None:
             max_resource_size = max([len(process.array) for process in self])
-            # Pad arrays out to the correct size:
-            # The processes weren't necessarily aware of the total number of
-            # resources at the time they were created
+
             for process in self:
                 process.array.resize(max_resource_size, refcheck=False)
             self._process_produces = np.transpose(
                 np.array([process.array for process in self])
             )
         return self._process_produces
+
+    @property
+    def process_produces_lb(self) -> ndarray:
+        if self._process_lower_bounds is None:
+            max_resource_size = max(
+                [len(process.lb_array) for process in self]
+            )
+            for process in self:
+                process.lb_array.resize(max_resource_size, refcheck=False)
+            self._process_lower_bounds = np.transpose(
+                np.array([process.lb_array for process in self])
+            )
+        return self._process_lower_bounds
+
+    @property
+    def process_produces_ub(self) -> ndarray:
+        if self._process_upper_bounds is None:
+            max_resource_size = max(
+                [len(process.ub_array) for process in self]
+            )
+            for process in self:
+                process.lb_array.resize(max_resource_size, refcheck=False)
+            self._process_upper_bounds = np.transpose(
+                np.array([process.ub_array for process in self])
+            )
+        return self._process_upper_bounds

@@ -194,6 +194,7 @@ def construct_cumulative_resource_matrix(
             solve(
                 resources,
                 processes,
+                use_process_bounds=False,
                 constraints=[
                     EqConstraint(
                         f"{process.name}_no_runs",
@@ -225,7 +226,11 @@ class Measure:
         self,
         resources: Resources,
         processes: Processes,
-        constraints: Sequence[Union[EqConstraint, LeConstraint]],
+        constraints: Union[
+            List[Union[EqConstraint, LeConstraint]],
+            List[EqConstraint],
+            List[LeConstraint],
+        ],
         objective: Optional[ProcessExpr] = None,
         maxiter: Optional[int] = None,
         allow_inconsistent_order_of_mag: bool = False,
@@ -237,6 +242,7 @@ class Measure:
         self._run_vector = solve(
             resources=resources,
             processes=processes,
+            use_process_bounds=False,
             constraints=constraints,
             objective=objective,
             maxiter=maxiter,
