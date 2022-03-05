@@ -1,4 +1,4 @@
-from mat_dp_core.maths_core import (
+from mat_dp_core import (
     EqConstraint,
     GeConstraint,
     LeConstraint,
@@ -24,5 +24,5 @@ objective = arable_farm + dairy_farm + 2 * mcdonalds
 solution = Measure(resources, processes, [constraint])
 print(solution.flow_from(arable_farm))
 print(solution)
-print(solution._run_vector)
+print(solution.run_vector)
 print(solution.cumulative_resource())

@@ -1,4 +1,4 @@
-from mat_dp_core.maths_core import (
+from mat_dp_core import (
     EqConstraint,
     GeConstraint,
     LeConstraint,
@@ -55,7 +55,7 @@ objective = (
 measurement = Measure(resources, processes, constraints, objective)
 from pprint import pprint
 
-print(measurement._run_vector)
+print(measurement.run_vector)
 print("flow", measurement.resource())
 print(measurement.resource(pizza_box))
 pprint(measurement.cumulative_resource())

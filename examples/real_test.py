@@ -1,11 +1,12 @@
-from mat_dp_core import ResourceConstraint, RunRatioConstraint
-from mat_dp_core.maths_core import (
+from mat_dp_core import (
     EqConstraint,
     GeConstraint,
     LeConstraint,
     Measure,
     Processes,
+    ResourceConstraint,
     Resources,
+    RunRatioConstraint,
 )
 
 resources = Resources()
@@ -51,7 +52,7 @@ objective = (
 )
 
 solution = Measure(resources, processes, constraints, objective)
-print(solution._run_vector)
+print(solution.run_vector)
 
 result = solution.resource(energy)
 print(result)
