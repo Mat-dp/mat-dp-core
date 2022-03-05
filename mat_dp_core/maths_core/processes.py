@@ -153,36 +153,58 @@ class Process:
             return self.index == other.index and self._parent == other._parent
 
 
+Produces = float
+LowerBound = float
+UpperBound = float
+CreateType = Union[
+    Tuple[Resource, Produces],
+    Tuple[Resource, Tuple[Produces, LowerBound, UpperBound]],
+]
+
+
 class Processes:
     # Maps process names to resource demands
-    _processes: MutableSequence[Tuple[ProcessName, ndarray]]
+    _processes: MutableSequence[
+        Tuple[ProcessName, ndarray, Optional[ndarray], Optional[ndarray]]
+    ]
     _process_produces: Optional[ndarray]  # (resources, processes)
+    _process_lower_bounds: Optional[ndarray]  # (resources, processes)
+    _process_upper_bounds: Optional[ndarray]  # (resources, processes)
 
     def __init__(self) -> None:
         self._processes = []
         self._process_produces = None
 
-    def create(
-        self, name: ProcessName, *resources: Tuple[Resource, float]
-    ) -> Process:
+    def create(self, name: ProcessName, *resources: CreateType) -> Process:
         if len(resources) == 0:
             raise ValueError(f"No resources attached to {name}")
         res_max_index = (
             max([resource.index for (resource, _) in resources]) + 1
         )
-        array = np.zeros(res_max_index)
-        for (resource, v) in resources:
+        produces_array = np.zeros(res_max_index)
+        lb_array = None
+        ub_array = None
+        for resource, item in resources:
             i = resource.index
-            array[i] = v
-        process_inner = (name, array)
+            if isinstance(item, tuple):
+                if lb_array is None:
+                    lb_array = np.zeros(res_max_index, dtype=object)
+                if ub_array is None:
+                    ub_array = np.zeros(res_max_index, dtype=object)
+                produces = item[0]
+                lb_array[i] = item[1]
+                ub_array[i] = item[2]
+            else:
+                produces = item
+            produces_array[i] = produces
+
+        process_inner = (name, produces_array, lb_array, ub_array)
         self._processes.append(process_inner)
         return self[len(self._processes) - 1]
 
     def load(
         self,
-        processes: Sequence[
-            Tuple[ProcessName, Sequence[Tuple[Resource, float]]]
-        ],
+        processes: Sequence[Tuple[ProcessName, Sequence[CreateType]]],
     ) -> List[Process]:
         """
         Load some additional processes in bulk
@@ -197,7 +219,11 @@ class Processes:
             )
         )
 
-    def dump(self) -> Sequence[Tuple[ProcessName, ndarray]]:
+    def dump(
+        self,
+    ) -> Sequence[
+        Tuple[ProcessName, ndarray, Optional[ndarray], Optional[ndarray]]
+    ]:
         """
         Dump processes in bulk
         """
@@ -214,7 +240,9 @@ class Processes:
                 raise IndexError("list index out of range")
         else:
             results = [
-                i for i, (name, _) in enumerate(self._processes) if name == arg
+                i
+                for i, (name, _, _, _) in enumerate(self._processes)
+                if name == arg
             ]
             if len(results) == 0:
                 raise KeyError(f"'{arg}'")

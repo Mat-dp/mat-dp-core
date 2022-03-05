@@ -114,14 +114,14 @@ class TestProcesses:
         hay = resources.create("hay")
         processes = Processes()
         processes.load([("test", [(hay, 2)])])
-        assert processes._processes == [("test", np.array([2.0]))]
+        assert processes._processes == [("test", np.array([2.0]), None, None)]
 
     async def test_dump(self):
         resources = Resources()
         hay = resources.create("hay")
         processes = Processes()
         processes.create("test", (hay, 2))
-        assert processes.dump() == [("test", np.array([2.0]))]
+        assert processes.dump() == [("test", np.array([2.0]), None, None)]
 
     async def test_getitem_out_of_range(self):
         resources = Resources()
