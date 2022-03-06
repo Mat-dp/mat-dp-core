@@ -412,7 +412,7 @@ class BoundedSolver(Solver):
                     self._exact_solver.cumulative_resource_matrix
                 )
             else:
-                self._cumulative_resource_matrix_ub = np.min(
+                self._cumulative_resource_matrix_ub = np.max(
                     np.array(
                         [
                             i.cumulative_resource_matrix
