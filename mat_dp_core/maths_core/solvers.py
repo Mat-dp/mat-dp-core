@@ -221,27 +221,6 @@ class Solver:
         return self._cumulative_resource_matrix
 
 
-def bound_resource_matrix_from_solvers(
-    solvers: List[Tuple[Process, Solver]]
-) -> ndarray:
-    # TODO Implement
-    raise NotImplementedError
-
-
-def bound_flow_matrix_from_solvers(
-    solvers: List[Tuple[Process, Solver]]
-) -> ndarray:
-    # TODO Implement
-    raise NotImplementedError
-
-
-def bound_cumulative_resource_matrix_from_solvers(
-    solvers: List[Tuple[Process, Solver]]
-) -> ndarray:
-    # TODO Implement
-    raise NotImplementedError
-
-
 class BoundedSolver(Solver):
     run_vector_lb: ndarray
     run_vector_ub: ndarray
@@ -250,8 +229,8 @@ class BoundedSolver(Solver):
     _flow_matrix_lb: Optional[ndarray]  # (resource, process, process)
     _flow_matrix_ub: Optional[ndarray]  # (resource, process, process)
     _cumulative_resource_matrix: Optional[ndarray]  # (resource, process)
-    _lower_solvers: Optional[List[Tuple[Process, Solver]]]
-    _upper_solvers: Optional[List[Tuple[Process, Solver]]]
+    _lower_solvers: Optional[List[Solver]]
+    _upper_solvers: Optional[List[Solver]]
 
     def __init__(
         self,
@@ -312,8 +291,8 @@ class BoundedSolver(Solver):
                     maxiter=maxiter,
                     allow_inconsistent_order_of_mag=self._allow_inconsistent_order_of_mag,
                 )
-                lower_solvers.append((process, lower_solver))
-                upper_solvers.append((process, upper_solver))
+                lower_solvers.append(lower_solver)
+                upper_solvers.append(upper_solver)
             self._lower_solvers = lower_solvers
             self._upper_solvers = upper_solvers
         else:
@@ -327,13 +306,32 @@ class BoundedSolver(Solver):
         return self._resource_matrix
 
     @property
+    def resource_matrix_lb_stack(self):
+        if self._resource_matrix_lb_stack is None:
+            assert self._lower_solvers is not None
+            self._resource_matrix_lb_stack = np.array(
+                [i.resource_matrix for i in self._lower_solvers]
+            )
+        return self._resource_matrix_lb_stack
+
+    @property
+    def resource_matrix_ub_stack(self):
+        if self._resource_matrix_ub_stack is None:
+            assert self._upper_solvers is not None
+            self._resource_matrix_ub_stack = np.array(
+                [i.resource_matrix for i in self._upper_solvers]
+            )
+        return self._resource_matrix_ub_stack
+
+    @property
     def resource_matrix_lb(self):
         if self._resource_matrix_lb is None:
             if self._lower_solvers is None:
                 self._resource_matrix_lb = self._exact_solver.resource_matrix
             else:
-                self._resource_matrix_lb = bound_resource_matrix_from_solvers(
-                    self._lower_solvers
+                self._resource_matrix_lb = np.min(
+                    np.array([i.resource_matrix for i in self._lower_solvers]),
+                    axis=0,
                 )
         return self._resource_matrix_lb
 
@@ -343,8 +341,9 @@ class BoundedSolver(Solver):
             if self._upper_solvers is None:
                 self._resource_matrix_ub = self._exact_solver.resource_matrix
             else:
-                self._resource_matrix_ub = bound_resource_matrix_from_solvers(
-                    self._upper_solvers
+                self._resource_matrix_ub = np.max(
+                    np.array([i.resource_matrix for i in self._upper_solvers]),
+                    axis=0,
                 )
         return self._resource_matrix_ub
 
@@ -360,8 +359,9 @@ class BoundedSolver(Solver):
             if self._lower_solvers is None:
                 self._flow_matrix_lb = self._exact_solver.flow_matrix
             else:
-                self._flow_matrix_lb = bound_flow_matrix_from_solvers(
-                    self._lower_solvers
+                self._flow_matrix_lb = np.min(
+                    np.array([i.flow_matrix for i in self._lower_solvers]),
+                    axis=0,
                 )
         return self._flow_matrix_lb
 
@@ -371,8 +371,9 @@ class BoundedSolver(Solver):
             if self._upper_solvers is None:
                 self._flow_matrix_ub = self._exact_solver.flow_matrix
             else:
-                self._flow_matrix_ub = bound_flow_matrix_from_solvers(
-                    self._upper_solvers
+                self._flow_matrix_ub = np.max(
+                    np.array([i.flow_matrix for i in self._upper_solvers]),
+                    axis=0,
                 )
         return self._flow_matrix_ub
 
@@ -392,10 +393,14 @@ class BoundedSolver(Solver):
                     self._exact_solver.cumulative_resource_matrix
                 )
             else:
-                self._cumulative_resource_matrix_lb = (
-                    bound_cumulative_resource_matrix_from_solvers(
-                        self._lower_solvers
-                    )
+                self._cumulative_resource_matrix_lb = np.min(
+                    np.array(
+                        [
+                            i.cumulative_resource_matrix
+                            for i in self._lower_solvers
+                        ]
+                    ),
+                    axis=0,
                 )
         return self._cumulative_resource_matrix_lb
 
@@ -407,9 +412,13 @@ class BoundedSolver(Solver):
                     self._exact_solver.cumulative_resource_matrix
                 )
             else:
-                self._cumulative_resource_matrix_ub = (
-                    bound_cumulative_resource_matrix_from_solvers(
-                        self._upper_solvers
-                    )
+                self._cumulative_resource_matrix_ub = np.min(
+                    np.array(
+                        [
+                            i.cumulative_resource_matrix
+                            for i in self._upper_solvers
+                        ]
+                    ),
+                    axis=0,
                 )
         return self._cumulative_resource_matrix_ub
