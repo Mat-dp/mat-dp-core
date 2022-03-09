@@ -510,6 +510,7 @@ class TestFlow:
             process_to=farming_example_measure._processes["dairy_farm"],
             resource=farming_example_measure._resources["hay"],
         )
+        assert isinstance(results, float)
         assert round(results, 3) == 20
 
 
@@ -533,6 +534,7 @@ class TestFlowTo:
             process_to=farming_example_measure._processes["dairy_farm"],
             resource=farming_example_measure._resources["hay"],
         )
+        assert isinstance(results, float)
         assert round(results, 3) == 20
 
 
@@ -556,6 +558,7 @@ class TestFlowFrom:
             process_from=farming_example_measure._processes["arable_farm"],
             resource=farming_example_measure._resources["hay"],
         )
+        assert isinstance(results, float)
         assert round(results, 3) == 20
 
 

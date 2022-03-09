@@ -1,4 +1,4 @@
-from typing import Optional, Sequence, Tuple, Union, overload
+from typing import List, Optional, Tuple, Union, overload
 
 import numpy as np
 from numpy import ndarray
@@ -19,7 +19,12 @@ def calculate_incident_flow(
 
 class Measure(BoundedSolver):
     @overload
-    def run(self, *, bounds: bool = False) -> Sequence[Tuple[Process, float]]:
+    def run(
+        self, *, bounds: bool = False
+    ) -> Union[
+        List[Tuple[Process, float]],
+        List[Tuple[Process, float, float, float]],
+    ]:
         """
         bounds: Whether or not to calculate bounds
 
@@ -28,7 +33,9 @@ class Measure(BoundedSolver):
         ...
 
     @overload
-    def run(self, *, process: Process, bounds: bool = False) -> float:
+    def run(
+        self, *, process: Process, bounds: bool = False
+    ) -> Union[float, Tuple[float, float, float]]:
         """
         process: The process under inspection
         bounds: Whether or not to calculate bounds
@@ -39,16 +46,42 @@ class Measure(BoundedSolver):
 
     def run(
         self, *, process: Optional[Process] = None, bounds: bool = False
-    ) -> Union[Sequence[Tuple[Process, float]], float]:
+    ) -> Union[
+        List[Tuple[Process, float]],
+        List[Tuple[Process, float, float, float]],
+        float,
+        Tuple[float, float, float],
+    ]:
         if process is None:
-            return list(zip(self._processes, self.run_vector))
+            if bounds:
+                return list(
+                    zip(
+                        self._processes,
+                        self.run_vector,
+                        self.run_vector_lb,
+                        self.run_vector_ub,
+                    )
+                )
+            else:
+                return list(zip(self._processes, self.run_vector))
         else:
-            return self.run_vector[process.index]
+            if bounds:
+                return (
+                    self.run_vector[process.index],
+                    self.run_vector_lb[process.index],
+                    self.run_vector_ub[process.index],
+                )
+            else:
+                return self.run_vector[process.index]
 
     @overload
     def resource(
         self, *, bounds: bool = False
-    ) -> Sequence[Tuple[Process, Resource, float]]:
+    ) -> Union[
+        List[Tuple[Process, Resource, float]],
+        List[Tuple[Process, Resource, float, float, float]],
+    ]:
+
         """
         bounds: Whether or not to calculate bounds
 
@@ -59,7 +92,10 @@ class Measure(BoundedSolver):
     @overload
     def resource(
         self, *, process: Process, bounds: bool = False
-    ) -> Sequence[Tuple[Resource, float]]:
+    ) -> Union[
+        List[Tuple[Resource, float]],
+        List[Tuple[Resource, float, float, float]],
+    ]:
         """
         process: A process to be measured
         bounds: Whether or not to calculate bounds
@@ -71,7 +107,9 @@ class Measure(BoundedSolver):
     @overload
     def resource(
         self, *, resource: Resource, bounds: bool = False
-    ) -> Sequence[Tuple[Process, float]]:
+    ) -> Union[
+        List[Tuple[Process, float]], List[Tuple[Process, float, float, float]]
+    ]:
         """
         resource: A resource to be measured
         bounds: Whether or not to calculate bounds
@@ -83,7 +121,7 @@ class Measure(BoundedSolver):
     @overload
     def resource(
         self, *, process: Process, resource: Resource, bounds: bool = False
-    ) -> float:
+    ) -> Union[float, Tuple[float, float, float]]:
         """
         process: A process to be measured
         resource: A resource to be measured
@@ -100,47 +138,88 @@ class Measure(BoundedSolver):
         resource: Optional[Resource] = None,
         bounds: bool = False
     ) -> Union[
-        Sequence[Tuple[Process, Resource, float]],
-        Sequence[Tuple[Resource, float]],
-        Sequence[Tuple[Process, float]],
+        List[Tuple[Process, Resource, float]],
+        List[Tuple[Resource, float]],
+        List[Tuple[Process, float]],
         float,
+        List[Tuple[Process, Resource, float, float, float]],
+        List[Tuple[Resource, float, float, float]],
+        List[Tuple[Process, float, float, float]],
+        Tuple[float, float, float],
     ]:
         if process is None and resource is None:
             output = []
             for p in self._processes:
                 for r in self._resources:
-                    output.append(
-                        (
-                            p,
-                            r,
-                            self.resource_matrix[r.index][p.index],
+                    if bounds:
+                        output.append(
+                            (
+                                p,
+                                r,
+                                self.resource_matrix[r.index][p.index],
+                                self.resource_matrix_lb[r.index][p.index],
+                                self.resource_matrix_ub[r.index][p.index],
+                            )
                         )
-                    )
+                    else:
+                        output.append(
+                            (
+                                p,
+                                r,
+                                self.resource_matrix[r.index][p.index],
+                            )
+                        )
             return output
         elif process is not None and resource is None:
-            return list(
-                zip(
-                    self._resources,
-                    self.resource_matrix[:, process.index],
+            if bounds:
+                return list(
+                    zip(
+                        self._resources,
+                        self.resource_matrix[:, process.index],
+                        self.resource_matrix_lb[:, process.index],
+                        self.resource_matrix_ub[:, process.index],
+                    )
                 )
-            )
+            else:
+                return list(
+                    zip(
+                        self._resources, self.resource_matrix[:, process.index]
+                    )
+                )
         elif resource is not None and process is None:
-            return list(
-                zip(
-                    self._processes,
-                    self.resource_matrix[resource.index],
+            if bounds:
+                return list(
+                    zip(
+                        self._processes,
+                        self.resource_matrix[resource.index],
+                        self.resource_matrix_lb[resource.index],
+                        self.resource_matrix_ub[resource.index],
+                    )
                 )
-            )
+            else:
+                return list(
+                    zip(
+                        self._processes,
+                        self.resource_matrix[resource.index],
+                    )
+                )
         else:
             assert resource is not None and process is not None
-            return self.resource_matrix[resource.index][process.index]
+            if bounds:
+                return (
+                    self.resource_matrix[resource.index][process.index],
+                    self.resource_matrix_lb[resource.index][process.index],
+                    self.resource_matrix_ub[resource.index][process.index],
+                )
+            else:
+                return self.resource_matrix[resource.index][process.index]
 
     @overload
     def flow(
         self, *, bounds: bool = False
     ) -> Union[
-        Sequence[Tuple[Process, Process, Resource, float]],
-        Sequence[Tuple[Process, Process, Resource, float, float, float]],
+        List[Tuple[Process, Process, Resource, float]],
+        List[Tuple[Process, Process, Resource, float, float, float]],
     ]:
         """
         Returns all flows between each process pair and each resource.
@@ -155,8 +234,8 @@ class Measure(BoundedSolver):
         process_to: Process,
         bounds: bool = False
     ) -> Union[
-        Sequence[Tuple[Resource, float]],
-        Sequence[Tuple[Resource, float, float, float]],
+        List[Tuple[Resource, float]],
+        List[Tuple[Resource, float, float, float]],
     ]:
         """
         process_from: The process to measure the flow from
@@ -171,8 +250,8 @@ class Measure(BoundedSolver):
     def flow(
         self, *, resource: Resource, bounds: bool = False
     ) -> Union[
-        Sequence[Tuple[Process, Process, float]],
-        Sequence[Tuple[Process, Process, float, float, float]],
+        List[Tuple[Process, Process, float]],
+        List[Tuple[Process, Process, float, float, float]],
     ]:
         """
         resource: The resource to measure flows for
@@ -186,8 +265,8 @@ class Measure(BoundedSolver):
     def flow(
         self, *, process_from: Process, bounds: bool = False
     ) -> Union[
-        Sequence[Tuple[Resource, float]],
-        Sequence[Tuple[Resource, float, float, float]],
+        List[Tuple[Resource, float]],
+        List[Tuple[Resource, float, float, float]],
     ]:
         """
         process: The process material is flowing from
@@ -218,8 +297,8 @@ class Measure(BoundedSolver):
     def flow(
         self, *, process_to: Process, bounds: bool = False
     ) -> Union[
-        Sequence[Tuple[Resource, float]],
-        Sequence[Tuple[Resource, float, float, float]],
+        List[Tuple[Resource, float]],
+        List[Tuple[Resource, float, float, float]],
     ]:
         """
         process: The process material is flowing into
@@ -269,13 +348,13 @@ class Measure(BoundedSolver):
         resource: Optional[Resource] = None,
         bounds: bool = False
     ) -> Union[
-        Sequence[Tuple[Process, Process, Resource, float]],
-        Sequence[Tuple[Resource, float]],
-        Sequence[Tuple[Process, Process, float]],
+        List[Tuple[Process, Process, Resource, float]],
+        List[Tuple[Resource, float]],
+        List[Tuple[Process, Process, float]],
         float,
-        Sequence[Tuple[Process, Process, Resource, float, float, float]],
-        Sequence[Tuple[Resource, float, float, float]],
-        Sequence[Tuple[Process, Process, float, float, float]],
+        List[Tuple[Process, Process, Resource, float, float, float]],
+        List[Tuple[Resource, float, float, float]],
+        List[Tuple[Process, Process, float, float, float]],
         Tuple[float, float, float],
     ]:
         if process_from is None and process_to is None and resource is None:
@@ -562,7 +641,10 @@ class Measure(BoundedSolver):
     @overload
     def cumulative_resource(
         self, *, bounds: bool = False
-    ) -> Sequence[Tuple[Process, Resource, float]]:
+    ) -> Union[
+        List[Tuple[Process, Resource, float]],
+        List[Tuple[Process, Resource, float, float, float]],
+    ]:
         """
         bounds: Whether or not to calculate bounds
 
@@ -573,7 +655,10 @@ class Measure(BoundedSolver):
     @overload
     def cumulative_resource(
         self, *, process: Process, bounds: bool = False
-    ) -> Sequence[Tuple[Resource, float]]:
+    ) -> Union[
+        List[Tuple[Resource, float]],
+        List[Tuple[Resource, float, float, float]],
+    ]:
         """
         process: The process using resource
         bounds: Whether or not to calculate bounds
@@ -585,7 +670,9 @@ class Measure(BoundedSolver):
     @overload
     def cumulative_resource(
         self, *, resource: Resource, bounds: bool = False
-    ) -> Sequence[Tuple[Process, float]]:
+    ) -> Union[
+        List[Tuple[Process, float]], List[Tuple[Process, float, float, float]]
+    ]:
         """
         resource: The resource we are measuring
         bounds: Whether or not to calculate bounds
@@ -597,7 +684,7 @@ class Measure(BoundedSolver):
     @overload
     def cumulative_resource(
         self, *, process: Process, resource: Resource, bounds: bool = False
-    ) -> float:
+    ) -> Union[float, Tuple[float, float, float]]:
         """
         process: The process using resource
         resource: The resource we are measuring
@@ -614,39 +701,95 @@ class Measure(BoundedSolver):
         resource: Optional[Resource] = None,
         bounds: bool = False
     ) -> Union[
-        Sequence[Tuple[Process, Resource, float]],
-        Sequence[Tuple[Resource, float]],
-        Sequence[Tuple[Process, float]],
+        List[Tuple[Process, Resource, float]],
+        List[Tuple[Resource, float]],
+        List[Tuple[Process, float]],
         float,
+        List[Tuple[Process, Resource, float, float, float]],
+        List[Tuple[Resource, float, float, float]],
+        List[Tuple[Process, float, float, float]],
+        Tuple[float, float, float],
     ]:
         if process is None and resource is None:
             output = []
             for p in self._processes:
                 for r in self._resources:
-                    output.append(
-                        (
-                            p,
-                            r,
-                            self.cumulative_resource_matrix[r.index][p.index],
+                    if bounds:
+                        output.append(
+                            (
+                                p,
+                                r,
+                                self.cumulative_resource_matrix[r.index][
+                                    p.index
+                                ],
+                                self.cumulative_resource_matrix_lb[r.index][
+                                    p.index
+                                ],
+                                self.cumulative_resource_matrix_ub[r.index][
+                                    p.index
+                                ],
+                            )
                         )
-                    )
+                    else:
+                        output.append(
+                            (
+                                p,
+                                r,
+                                self.cumulative_resource_matrix[r.index][
+                                    p.index
+                                ],
+                            )
+                        )
             return output
         elif process is not None and resource is None:
-            return list(
-                zip(
-                    self._resources,
-                    self.cumulative_resource_matrix[:, process.index],
+            if bounds:
+                return list(
+                    zip(
+                        self._resources,
+                        self.cumulative_resource_matrix[:, process.index],
+                        self.cumulative_resource_matrix_lb[:, process.index],
+                        self.cumulative_resource_matrix_ub[:, process.index],
+                    )
                 )
-            )
+            else:
+                return list(
+                    zip(
+                        self._resources,
+                        self.cumulative_resource_matrix[:, process.index],
+                    )
+                )
         elif resource is not None and process is None:
-            return list(
-                zip(
-                    self._processes,
-                    self.cumulative_resource_matrix[resource.index],
+            if bounds:
+                return list(
+                    zip(
+                        self._processes,
+                        self.cumulative_resource_matrix[resource.index],
+                        self.cumulative_resource_matrix_lb[resource.index],
+                        self.cumulative_resource_matrix_ub[resource.index],
+                    )
                 )
-            )
+            else:
+                return list(
+                    zip(
+                        self._processes,
+                        self.cumulative_resource_matrix[resource.index],
+                    )
+                )
         else:
             assert resource is not None and process is not None
-            return self.cumulative_resource_matrix[resource.index][
-                process.index
-            ]
+            if bounds:
+                return (
+                    self.cumulative_resource_matrix[resource.index][
+                        process.index
+                    ],
+                    self.cumulative_resource_matrix_lb[resource.index][
+                        process.index
+                    ],
+                    self.cumulative_resource_matrix_ub[resource.index][
+                        process.index
+                    ],
+                )
+            else:
+                return self.cumulative_resource_matrix[resource.index][
+                    process.index
+                ]
