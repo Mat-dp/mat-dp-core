@@ -11,7 +11,8 @@ def extract_from_resource_process_array(
     resource_process_array: ndarray,
     resources: Resources,
     processes: Processes,
-    input_args: Tuple[Optional[Union[Process, Resource]], Optional[Resource]],
+    process: Optional[Process],
+    resource: Optional[Resource],
 ) -> Union[
     Sequence[Tuple[Process, Resource, float]],
     Sequence[Tuple[Resource, float]],
@@ -24,8 +25,7 @@ def extract_from_resource_process_array(
     processes - The associated processes object
     input_args - The input args specifying the relevant resource and/or process, if any
     """
-    arg1, arg2 = input_args
-    if arg1 is None and arg2 is None:
+    if process is None and resource is None:
         output = []
         for p in processes:
             for r in resources:
@@ -37,23 +37,23 @@ def extract_from_resource_process_array(
                     )
                 )
         return output
-    elif isinstance(arg1, Process) and arg2 is None:
+    elif process is not None and resource is None:
         return list(
             zip(
                 resources,
-                resource_process_array[:, arg1.index],
+                resource_process_array[:, process.index],
             )
         )
-    elif isinstance(arg1, Resource) and arg2 is None:
+    elif resource is not None and process is None:
         return list(
             zip(
                 processes,
-                resource_process_array[arg1.index],
+                resource_process_array[resource.index],
             )
         )
     else:
-        assert arg1 is not None and arg2 is not None
-        return resource_process_array[arg2.index][arg1.index]
+        assert resource is not None and process is not None
+        return resource_process_array[resource.index][process.index]
 
 
 def calculate_incident_flow(
@@ -68,15 +68,15 @@ def calculate_incident_flow(
 
 class Measure(BoundedSolver):
     @overload
-    def run(self) -> Sequence[Tuple[Process, float]]:
+    def run(self, *, bounds=False) -> Sequence[Tuple[Process, float]]:
         ...
 
     @overload
-    def run(self, process: Process) -> float:
+    def run(self, *, process: Process, bounds=False) -> float:
         ...
 
     def run(
-        self, process: Optional[Process] = None
+        self, *, process: Optional[Process] = None, bounds=False
     ) -> Union[Sequence[Tuple[Process, float]], float]:
         if process is None:
             return list(zip(self._processes, self.run_vector))
@@ -84,14 +84,18 @@ class Measure(BoundedSolver):
             return self.run_vector[process.index]
 
     @overload
-    def resource(self) -> Sequence[Tuple[Process, Resource, float]]:
+    def resource(
+        self, *, bounds=False
+    ) -> Sequence[Tuple[Process, Resource, float]]:
         """
         Returns measurements for all processes and resources.
         """
         ...
 
     @overload
-    def resource(self, arg1: Process) -> Sequence[Tuple[Resource, float]]:
+    def resource(
+        self, *, process: Process, bounds=False
+    ) -> Sequence[Tuple[Resource, float]]:
         """
         arg1: A process to be measured
 
@@ -100,7 +104,9 @@ class Measure(BoundedSolver):
         ...
 
     @overload
-    def resource(self, arg1: Resource) -> Sequence[Tuple[Process, float]]:
+    def resource(
+        self, *, resource: Resource, bounds=False
+    ) -> Sequence[Tuple[Process, float]]:
         """
         arg1: A resource to be measured
 
@@ -109,7 +115,9 @@ class Measure(BoundedSolver):
         ...
 
     @overload
-    def resource(self, arg1: Process, arg2: Resource) -> float:
+    def resource(
+        self, *, process: Process, resource: Resource, bounds=False
+    ) -> float:
         """
         arg1: A process to be measured
         arg2: A resource to be measured
@@ -120,8 +128,10 @@ class Measure(BoundedSolver):
 
     def resource(
         self,
-        arg1: Optional[Union[Process, Resource]] = None,
-        arg2: Optional[Resource] = None,
+        *,
+        process: Optional[Process] = None,
+        resource: Optional[Resource] = None,
+        bounds=False
     ) -> Union[
         Sequence[Tuple[Process, Resource, float]],
         Sequence[Tuple[Resource, float]],
@@ -132,7 +142,8 @@ class Measure(BoundedSolver):
             self.resource_matrix,
             self._resources,
             self._processes,
-            (arg1, arg2),
+            process,
+            resource,
         )
 
     @overload
@@ -319,7 +330,9 @@ class Measure(BoundedSolver):
             )
 
     @overload
-    def cumulative_resource(self) -> Sequence[Tuple[Process, Resource, float]]:
+    def cumulative_resource(
+        self, *, bounds: bool = False
+    ) -> Sequence[Tuple[Process, Resource, float]]:
         """
         Returns the amount of each resource used for the entire chain of processes that led to each process.
         """
@@ -327,7 +340,7 @@ class Measure(BoundedSolver):
 
     @overload
     def cumulative_resource(
-        self, arg1: Process
+        self, *, process: Process, bounds: bool = False
     ) -> Sequence[Tuple[Resource, float]]:
         """
         arg1: The process using resource
@@ -338,7 +351,7 @@ class Measure(BoundedSolver):
 
     @overload
     def cumulative_resource(
-        self, arg1: Resource
+        self, *, resource: Resource, bounds: bool = False
     ) -> Sequence[Tuple[Process, float]]:
         """
         arg1: The resource we are measuring
@@ -348,7 +361,9 @@ class Measure(BoundedSolver):
         ...
 
     @overload
-    def cumulative_resource(self, arg1: Process, arg2: Resource) -> float:
+    def cumulative_resource(
+        self, *, process: Process, resource: Resource, bounds: bool = False
+    ) -> float:
         """
         arg1: The process using resource
         arg2: The resource we are measuring
@@ -359,8 +374,10 @@ class Measure(BoundedSolver):
 
     def cumulative_resource(
         self,
-        arg1: Optional[Union[Process, Resource]] = None,
-        arg2: Optional[Resource] = None,
+        *,
+        process: Optional[Process] = None,
+        resource: Optional[Resource] = None,
+        bounds: bool = False
     ) -> Union[
         Sequence[Tuple[Process, Resource, float]],
         Sequence[Tuple[Resource, float]],
@@ -371,5 +388,6 @@ class Measure(BoundedSolver):
             self.cumulative_resource_matrix,
             self._resources,
             self._processes,
-            (arg1, arg2),
+            process=process,
+            resource=resource,
         )

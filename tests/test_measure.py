@@ -409,7 +409,7 @@ class TestRun:
 
     async def test_farming_specify_process(self, farming_example_measure):
         results = farming_example_measure.run(
-            farming_example_measure._processes["arable_farm"]
+            process=farming_example_measure._processes["arable_farm"]
         )
         assert round(results, 3) == 20
 
@@ -428,7 +428,7 @@ class TestResource:
 
     async def test_farming_specify_process(self, farming_example_measure):
         results = farming_example_measure.resource(
-            farming_example_measure._processes["arable_farm"]
+            process=farming_example_measure._processes["arable_farm"]
         )
         assert len(results) == 2
         assert len(results[0]) == 2
@@ -437,7 +437,7 @@ class TestResource:
 
     async def test_farming_specify_resource(self, farming_example_measure):
         results = farming_example_measure.resource(
-            farming_example_measure._resources["hay"]
+            resource=farming_example_measure._resources["hay"]
         )
         assert len(results) == 3
         assert len(results[0]) == 2
@@ -450,8 +450,8 @@ class TestResource:
         self, farming_example_measure
     ):
         results = farming_example_measure.resource(
-            farming_example_measure._resources["hay"],
-            farming_example_measure._processes["arable_farm"],
+            resource=farming_example_measure._resources["hay"],
+            process=farming_example_measure._processes["arable_farm"],
         )
         assert round(results, 3) == 20
 
@@ -573,7 +573,7 @@ class TestCumulativeResource:
 
     async def test_farming_specify_process(self, farming_example_measure):
         results = farming_example_measure.cumulative_resource(
-            farming_example_measure._processes["arable_farm"]
+            process=farming_example_measure._processes["arable_farm"]
         )
         assert len(results) == 2
         assert len(results[0]) == 2
@@ -582,7 +582,7 @@ class TestCumulativeResource:
 
     async def test_farming_specify_resource(self, farming_example_measure):
         results = farming_example_measure.cumulative_resource(
-            farming_example_measure._resources["hay"]
+            resource=farming_example_measure._resources["hay"]
         )
         assert len(results) == 3
         assert len(results[0]) == 2
@@ -595,7 +595,7 @@ class TestCumulativeResource:
         self, farming_example_measure
     ):
         results = farming_example_measure.cumulative_resource(
-            farming_example_measure._resources["hay"],
-            farming_example_measure._processes["arable_farm"],
+            resource=farming_example_measure._resources["hay"],
+            process=farming_example_measure._processes["arable_farm"],
         )
         assert round(results, 3) == 20
