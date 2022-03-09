@@ -305,7 +305,7 @@ class Processes:
                 [len(process.ub_array) for process in self]
             )
             for process in self:
-                process.lb_array.resize(max_resource_size, refcheck=False)
+                process.ub_array.resize(max_resource_size, refcheck=False)
             self._process_upper_bounds = np.transpose(
                 np.array([process.ub_array for process in self])
             )

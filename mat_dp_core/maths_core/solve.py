@@ -195,10 +195,26 @@ def solve(
 
     res = linprog(
         c=coefficients * coeff_scale,
-        A_ub=np.einsum("ij, i -> ij", A_le, le_scales),
-        b_ub=np.einsum("i, i -> i", b_le, le_scales),
-        A_eq=np.einsum("ij, i -> ij", A_eq, eq_scales),
-        b_eq=np.einsum("i, i -> i", b_eq, eq_scales),
+        A_ub=np.einsum(
+            "ij, i -> ij",
+            np.array(A_le, dtype=float),
+            np.array(le_scales, dtype=float),
+        ),
+        b_ub=np.einsum(
+            "i, i -> i",
+            np.array(b_le, dtype=float),
+            np.array(le_scales, dtype=float),
+        ),
+        A_eq=np.einsum(
+            "ij, i -> ij",
+            np.array(A_eq, dtype=float),
+            np.array(eq_scales, dtype=float),
+        ),
+        b_eq=np.einsum(
+            "i, i -> i",
+            np.array(b_eq, dtype=float),
+            np.array(eq_scales, dtype=float),
+        ),
         options=options,
     )
     assert res.status in [0, 1, 2, 3]
