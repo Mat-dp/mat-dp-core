@@ -304,41 +304,6 @@ class Measure(BoundedSolver):
                             )
             return output
         elif (
-            resource is not None
-            and process_from is None
-            and process_to is None
-        ):
-            output = []
-            for p1 in self._processes:
-                for p2 in self._processes:
-                    if p1.index != p2.index:
-                        output.append(
-                            (
-                                p1,
-                                p2,
-                                self.flow_matrix[resource.index][p1.index][
-                                    p2.index
-                                ],
-                            )
-                        )
-            return output
-        elif (
-            process_from is not None
-            and process_to is not None
-            and resource is None
-        ):
-            output = []
-            for r in self._resources:
-                output.append(
-                    (
-                        r,
-                        self.flow_matrix[r.index][process_from.index][
-                            process_to.index
-                        ],
-                    )
-                )
-            return output
-        elif (
             process_from is not None
             and process_to is None
             and resource is None
@@ -356,20 +321,9 @@ class Measure(BoundedSolver):
                 for r in self._resources
             ]
         elif (
-            process_from is not None
-            and process_to is None
-            and resource is not None
-        ):
-            return calculate_incident_flow(
-                self.flow_matrix,
-                resource.index,
-                process_from.index,
-                flow_from=True,
-            )
-        elif (
-            resource is None
+            process_from is None
             and process_to is not None
-            and process_from is None
+            and resource is None
         ):
             return [
                 (
@@ -384,9 +338,58 @@ class Measure(BoundedSolver):
                 for r in self._resources
             ]
         elif (
-            resource is not None
+            process_from is None
+            and process_to is None
+            and resource is not None
+        ):
+            output = []
+            for p1 in self._processes:
+                for p2 in self._processes:
+                    if p1.index != p2.index:
+                        output.append(
+                            (
+                                p1,
+                                p2,
+                                self.flow_matrix[resource.index][p1.index][
+                                    p2.index
+                                ],
+                            )
+                        )
+            return output
+
+        elif (
+            process_from is not None
             and process_to is not None
-            and process_from is None
+            and resource is None
+        ):
+            output = []
+            for r in self._resources:
+                output.append(
+                    (
+                        r,
+                        self.flow_matrix[r.index][process_from.index][
+                            process_to.index
+                        ],
+                    )
+                )
+            return output
+
+        elif (
+            process_from is not None
+            and process_to is None
+            and resource is not None
+        ):
+            return calculate_incident_flow(
+                self.flow_matrix,
+                resource.index,
+                process_from.index,
+                flow_from=True,
+            )
+
+        elif (
+            process_from is None
+            and process_to is not None
+            and resource is not None
         ):
             return calculate_incident_flow(
                 self.flow_matrix,
