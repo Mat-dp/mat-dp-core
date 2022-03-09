@@ -7,55 +7,6 @@ from .maths_core import Process, Processes, Resource, Resources
 from .maths_core.solvers import BoundedSolver
 
 
-def extract_from_resource_process_array(
-    resource_process_array: ndarray,
-    resources: Resources,
-    processes: Processes,
-    process: Optional[Process],
-    resource: Optional[Resource],
-) -> Union[
-    Sequence[Tuple[Process, Resource, float]],
-    Sequence[Tuple[Resource, float]],
-    Sequence[Tuple[Process, float]],
-    float,
-]:
-    """
-    resource_process_array - a 2D input array of the form (resource, process)
-    resources - The associated resources object
-    processes - The associated processes object
-    input_args - The input args specifying the relevant resource and/or process, if any
-    """
-    if process is None and resource is None:
-        output = []
-        for p in processes:
-            for r in resources:
-                output.append(
-                    (
-                        p,
-                        r,
-                        resource_process_array[r.index][p.index],
-                    )
-                )
-        return output
-    elif process is not None and resource is None:
-        return list(
-            zip(
-                resources,
-                resource_process_array[:, process.index],
-            )
-        )
-    elif resource is not None and process is None:
-        return list(
-            zip(
-                processes,
-                resource_process_array[resource.index],
-            )
-        )
-    else:
-        assert resource is not None and process is not None
-        return resource_process_array[resource.index][process.index]
-
-
 def calculate_incident_flow(
     flow_matrix, resource_index, process_index, flow_from: bool
 ) -> float:
@@ -154,18 +105,43 @@ class Measure(BoundedSolver):
         Sequence[Tuple[Process, float]],
         float,
     ]:
-        return extract_from_resource_process_array(
-            self.resource_matrix,
-            self._resources,
-            self._processes,
-            process,
-            resource,
-        )
+        if process is None and resource is None:
+            output = []
+            for p in self._processes:
+                for r in self._resources:
+                    output.append(
+                        (
+                            p,
+                            r,
+                            self.resource_matrix[r.index][p.index],
+                        )
+                    )
+            return output
+        elif process is not None and resource is None:
+            return list(
+                zip(
+                    self._resources,
+                    self.resource_matrix[:, process.index],
+                )
+            )
+        elif resource is not None and process is None:
+            return list(
+                zip(
+                    self._processes,
+                    self.resource_matrix[resource.index],
+                )
+            )
+        else:
+            assert resource is not None and process is not None
+            return self.resource_matrix[resource.index][process.index]
 
     @overload
     def flow(
         self, *, bounds: bool = False
-    ) -> Sequence[Tuple[Process, Process, Resource, float]]:
+    ) -> Union[
+        Sequence[Tuple[Process, Process, Resource, float]],
+        Sequence[Tuple[Process, Process, Resource, float, float, float]],
+    ]:
         """
         Returns all flows between each process pair and each resource.
         """
@@ -178,7 +154,10 @@ class Measure(BoundedSolver):
         process_from: Process,
         process_to: Process,
         bounds: bool = False
-    ) -> Sequence[Tuple[Resource, float]]:
+    ) -> Union[
+        Sequence[Tuple[Resource, float]],
+        Sequence[Tuple[Resource, float, float, float]],
+    ]:
         """
         process_from: The process to measure the flow from
         process_to: The process to measure the flow to
@@ -191,7 +170,10 @@ class Measure(BoundedSolver):
     @overload
     def flow(
         self, *, resource: Resource, bounds: bool = False
-    ) -> Sequence[Tuple[Process, Process, float]]:
+    ) -> Union[
+        Sequence[Tuple[Process, Process, float]],
+        Sequence[Tuple[Process, Process, float, float, float]],
+    ]:
         """
         resource: The resource to measure flows for
         bounds: Whether or not to calculate bounds
@@ -203,7 +185,10 @@ class Measure(BoundedSolver):
     @overload
     def flow(
         self, *, process_from: Process, bounds: bool = False
-    ) -> Sequence[Tuple[Resource, float]]:
+    ) -> Union[
+        Sequence[Tuple[Resource, float]],
+        Sequence[Tuple[Resource, float, float, float]],
+    ]:
         """
         process: The process material is flowing from
         bounds: Whether or not to calculate bounds
@@ -219,7 +204,7 @@ class Measure(BoundedSolver):
         process_from: Process,
         resource: Resource,
         bounds: bool = False
-    ) -> float:
+    ) -> Union[float, Tuple[float, float, float]]:
         """
         process_from: The process material is flowing from
         resource: The resource that is flowing
@@ -232,7 +217,10 @@ class Measure(BoundedSolver):
     @overload
     def flow(
         self, *, process_to: Process, bounds: bool = False
-    ) -> Sequence[Tuple[Resource, float]]:
+    ) -> Union[
+        Sequence[Tuple[Resource, float]],
+        Sequence[Tuple[Resource, float, float, float]],
+    ]:
         """
         process: The process material is flowing into
         bounds: Whether or not to calculate bounds
@@ -244,7 +232,7 @@ class Measure(BoundedSolver):
     @overload
     def flow(
         self, *, process_to: Process, resource: Resource, bounds: bool = False
-    ) -> float:
+    ) -> Union[float, Tuple[float, float, float]]:
         """
         process_to: The process material is flowing into
         resource: The resource that is flowing
@@ -262,7 +250,7 @@ class Measure(BoundedSolver):
         process_to: Process,
         resource: Resource,
         bounds: bool = False
-    ) -> float:
+    ) -> Union[float, Tuple[float, float, float]]:
         """
         process_from: The process to measure the flow from
         process_to: The process to measure the flow to
@@ -285,6 +273,10 @@ class Measure(BoundedSolver):
         Sequence[Tuple[Resource, float]],
         Sequence[Tuple[Process, Process, float]],
         float,
+        Sequence[Tuple[Process, Process, Resource, float, float, float]],
+        Sequence[Tuple[Resource, float, float, float]],
+        Sequence[Tuple[Process, Process, float, float, float]],
+        Tuple[float, float, float],
     ]:
         if process_from is None and process_to is None and resource is None:
             output = []
@@ -292,51 +284,121 @@ class Measure(BoundedSolver):
                 for p2 in self._processes:
                     for r in self._resources:
                         if p1.index != p2.index:
-                            output.append(
-                                (
-                                    p1,
-                                    p2,
-                                    r,
-                                    self.flow_matrix[r.index][p1.index][
-                                        p2.index
-                                    ],
+                            if bounds:
+                                output.append(
+                                    (
+                                        p1,
+                                        p2,
+                                        r,
+                                        self.flow_matrix[r.index][p1.index][
+                                            p2.index
+                                        ],
+                                        self.flow_matrix_lb[r.index][p1.index][
+                                            p2.index
+                                        ],
+                                        self.flow_matrix_ub[r.index][p1.index][
+                                            p2.index
+                                        ],
+                                    )
                                 )
-                            )
+                            else:
+                                output.append(
+                                    (
+                                        p1,
+                                        p2,
+                                        r,
+                                        self.flow_matrix[r.index][p1.index][
+                                            p2.index
+                                        ],
+                                    )
+                                )
             return output
         elif (
             process_from is not None
             and process_to is None
             and resource is None
         ):
-            return [
-                (
-                    r,
-                    calculate_incident_flow(
-                        self.flow_matrix,
-                        r.index,
-                        process_from.index,
-                        flow_from=True,
-                    ),
-                )
-                for r in self._resources
-            ]
+            if bounds:
+                return [
+                    (
+                        r,
+                        calculate_incident_flow(
+                            self.flow_matrix,
+                            r.index,
+                            process_from.index,
+                            flow_from=True,
+                        ),
+                        calculate_incident_flow(
+                            self.flow_matrix_lb,
+                            r.index,
+                            process_from.index,
+                            flow_from=True,
+                        ),
+                        calculate_incident_flow(
+                            self.flow_matrix_ub,
+                            r.index,
+                            process_from.index,
+                            flow_from=True,
+                        ),
+                    )
+                    for r in self._resources
+                ]
+            else:
+                return [
+                    (
+                        r,
+                        calculate_incident_flow(
+                            self.flow_matrix,
+                            r.index,
+                            process_from.index,
+                            flow_from=True,
+                        ),
+                    )
+                    for r in self._resources
+                ]
         elif (
             process_from is None
             and process_to is not None
             and resource is None
         ):
-            return [
-                (
-                    r,
-                    calculate_incident_flow(
-                        self.flow_matrix,
-                        r.index,
-                        process_to.index,
-                        flow_from=False,
-                    ),
-                )
-                for r in self._resources
-            ]
+            if bounds:
+                return [
+                    (
+                        r,
+                        calculate_incident_flow(
+                            self.flow_matrix,
+                            r.index,
+                            process_to.index,
+                            flow_from=False,
+                        ),
+                        calculate_incident_flow(
+                            self.flow_matrix_lb,
+                            r.index,
+                            process_to.index,
+                            flow_from=False,
+                        ),
+                        calculate_incident_flow(
+                            self.flow_matrix_ub,
+                            r.index,
+                            process_to.index,
+                            flow_from=False,
+                        ),
+                    )
+                    for r in self._resources
+                ]
+            else:
+                return [
+                    (
+                        r,
+                        calculate_incident_flow(
+                            self.flow_matrix,
+                            r.index,
+                            process_to.index,
+                            flow_from=False,
+                        ),
+                    )
+                    for r in self._resources
+                ]
         elif (
             process_from is None
             and process_to is None
@@ -346,15 +408,32 @@ class Measure(BoundedSolver):
             for p1 in self._processes:
                 for p2 in self._processes:
                     if p1.index != p2.index:
-                        output.append(
-                            (
-                                p1,
-                                p2,
-                                self.flow_matrix[resource.index][p1.index][
-                                    p2.index
-                                ],
+                        if bounds:
+                            output.append(
+                                (
+                                    p1,
+                                    p2,
+                                    self.flow_matrix[resource.index][p1.index][
+                                        p2.index
+                                    ],
+                                    self.flow_matrix_lb[resource.index][
+                                        p1.index
+                                    ][p2.index],
+                                    self.flow_matrix_ub[resource.index][
+                                        p1.index
+                                    ][p2.index],
+                                )
                             )
-                        )
+                        else:
+                            output.append(
+                                (
+                                    p1,
+                                    p2,
+                                    self.flow_matrix[resource.index][p1.index][
+                                        p2.index
+                                    ],
+                                )
+                            )
             return output
 
         elif (
@@ -364,14 +443,30 @@ class Measure(BoundedSolver):
         ):
             output = []
             for r in self._resources:
-                output.append(
-                    (
-                        r,
-                        self.flow_matrix[r.index][process_from.index][
-                            process_to.index
-                        ],
+                if bounds:
+                    output.append(
+                        (
+                            r,
+                            self.flow_matrix[r.index][process_from.index][
+                                process_to.index
+                            ],
+                            self.flow_matrix_lb[r.index][process_from.index][
+                                process_to.index
+                            ],
+                            self.flow_matrix_ub[r.index][process_from.index][
+                                process_to.index
+                            ],
+                        )
                     )
-                )
+                else:
+                    output.append(
+                        (
+                            r,
+                            self.flow_matrix[r.index][process_from.index][
+                                process_to.index
+                            ],
+                        )
+                    )
             return output
 
         elif (
@@ -379,33 +474,90 @@ class Measure(BoundedSolver):
             and process_to is None
             and resource is not None
         ):
-            return calculate_incident_flow(
-                self.flow_matrix,
-                resource.index,
-                process_from.index,
-                flow_from=True,
-            )
+            if bounds:
+                return (
+                    calculate_incident_flow(
+                        self.flow_matrix,
+                        resource.index,
+                        process_from.index,
+                        flow_from=True,
+                    ),
+                    calculate_incident_flow(
+                        self.flow_matrix_lb,
+                        resource.index,
+                        process_from.index,
+                        flow_from=True,
+                    ),
+                    calculate_incident_flow(
+                        self.flow_matrix_ub,
+                        resource.index,
+                        process_from.index,
+                        flow_from=True,
+                    ),
+                )
+            else:
+                return calculate_incident_flow(
+                    self.flow_matrix,
+                    resource.index,
+                    process_from.index,
+                    flow_from=True,
+                )
 
         elif (
             process_from is None
             and process_to is not None
             and resource is not None
         ):
-            return calculate_incident_flow(
-                self.flow_matrix,
-                resource.index,
-                process_to.index,
-                flow_from=False,
-            )
+            if bounds:
+                return (
+                    calculate_incident_flow(
+                        self.flow_matrix,
+                        resource.index,
+                        process_to.index,
+                        flow_from=False,
+                    ),
+                    calculate_incident_flow(
+                        self.flow_matrix_lb,
+                        resource.index,
+                        process_to.index,
+                        flow_from=False,
+                    ),
+                    calculate_incident_flow(
+                        self.flow_matrix_ub,
+                        resource.index,
+                        process_to.index,
+                        flow_from=False,
+                    ),
+                )
+            else:
+                return calculate_incident_flow(
+                    self.flow_matrix,
+                    resource.index,
+                    process_to.index,
+                    flow_from=False,
+                )
         else:
             assert (
                 process_from is not None
                 and process_to is not None
                 and resource is not None
             )
-            return self.flow_matrix[resource.index][process_from.index][
-                process_to.index
-            ]
+            if bounds:
+                return (
+                    self.flow_matrix[resource.index][process_from.index][
+                        process_to.index
+                    ],
+                    self.flow_matrix_lb[resource.index][process_from.index][
+                        process_to.index
+                    ],
+                    self.flow_matrix_ub[resource.index][process_from.index][
+                        process_to.index
+                    ],
+                )
+            else:
+                return self.flow_matrix[resource.index][process_from.index][
+                    process_to.index
+                ]
 
     @overload
     def cumulative_resource(
@@ -467,10 +619,34 @@ class Measure(BoundedSolver):
         Sequence[Tuple[Process, float]],
         float,
     ]:
-        return extract_from_resource_process_array(
-            self.cumulative_resource_matrix,
-            self._resources,
-            self._processes,
-            process=process,
-            resource=resource,
-        )
+        if process is None and resource is None:
+            output = []
+            for p in self._processes:
+                for r in self._resources:
+                    output.append(
+                        (
+                            p,
+                            r,
+                            self.cumulative_resource_matrix[r.index][p.index],
+                        )
+                    )
+            return output
+        elif process is not None and resource is None:
+            return list(
+                zip(
+                    self._resources,
+                    self.cumulative_resource_matrix[:, process.index],
+                )
+            )
+        elif resource is not None and process is None:
+            return list(
+                zip(
+                    self._processes,
+                    self.cumulative_resource_matrix[resource.index],
+                )
+            )
+        else:
+            assert resource is not None and process is not None
+            return self.cumulative_resource_matrix[resource.index][
+                process.index
+            ]
