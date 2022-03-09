@@ -68,15 +68,26 @@ def calculate_incident_flow(
 
 class Measure(BoundedSolver):
     @overload
-    def run(self, *, bounds=False) -> Sequence[Tuple[Process, float]]:
+    def run(self, *, bounds: bool = False) -> Sequence[Tuple[Process, float]]:
+        """
+        bounds: Whether or not to calculate bounds
+
+        Returns the runs of each process
+        """
         ...
 
     @overload
-    def run(self, *, process: Process, bounds=False) -> float:
+    def run(self, *, process: Process, bounds: bool = False) -> float:
+        """
+        process: The process under inspection
+        bounds: Whether or not to calculate bounds
+
+        Returns the runs of this process
+        """
         ...
 
     def run(
-        self, *, process: Optional[Process] = None, bounds=False
+        self, *, process: Optional[Process] = None, bounds: bool = False
     ) -> Union[Sequence[Tuple[Process, float]], float]:
         if process is None:
             return list(zip(self._processes, self.run_vector))
@@ -85,19 +96,22 @@ class Measure(BoundedSolver):
 
     @overload
     def resource(
-        self, *, bounds=False
+        self, *, bounds: bool = False
     ) -> Sequence[Tuple[Process, Resource, float]]:
         """
+        bounds: Whether or not to calculate bounds
+
         Returns measurements for all processes and resources.
         """
         ...
 
     @overload
     def resource(
-        self, *, process: Process, bounds=False
+        self, *, process: Process, bounds: bool = False
     ) -> Sequence[Tuple[Resource, float]]:
         """
-        arg1: A process to be measured
+        process: A process to be measured
+        bounds: Whether or not to calculate bounds
 
         Returns the input and output resource values for the process specified.
         """
@@ -105,10 +119,11 @@ class Measure(BoundedSolver):
 
     @overload
     def resource(
-        self, *, resource: Resource, bounds=False
+        self, *, resource: Resource, bounds: bool = False
     ) -> Sequence[Tuple[Process, float]]:
         """
-        arg1: A resource to be measured
+        resource: A resource to be measured
+        bounds: Whether or not to calculate bounds
 
         Returns how much each process consumes or produces of the resource provided.
         """
@@ -116,11 +131,12 @@ class Measure(BoundedSolver):
 
     @overload
     def resource(
-        self, *, process: Process, resource: Resource, bounds=False
+        self, *, process: Process, resource: Resource, bounds: bool = False
     ) -> float:
         """
-        arg1: A process to be measured
-        arg2: A resource to be measured
+        process: A process to be measured
+        resource: A resource to be measured
+        bounds: Whether or not to calculate bounds
 
         Returns how much this process produces or consumes of this resource.
         """
@@ -131,7 +147,7 @@ class Measure(BoundedSolver):
         *,
         process: Optional[Process] = None,
         resource: Optional[Resource] = None,
-        bounds=False
+        bounds: bool = False
     ) -> Union[
         Sequence[Tuple[Process, Resource, float]],
         Sequence[Tuple[Resource, float]],
@@ -147,7 +163,9 @@ class Measure(BoundedSolver):
         )
 
     @overload
-    def flow(self) -> Sequence[Tuple[Process, Process, Resource, float]]:
+    def flow(
+        self, *, bounds: bool = False
+    ) -> Sequence[Tuple[Process, Process, Resource, float]]:
         """
         Returns all flows between each process pair and each resource.
         """
@@ -155,31 +173,101 @@ class Measure(BoundedSolver):
 
     @overload
     def flow(
-        self, arg1: Process, arg2: Process
+        self,
+        *,
+        process_from: Process,
+        process_to: Process,
+        bounds: bool = False
     ) -> Sequence[Tuple[Resource, float]]:
         """
-        arg1: The process to measure the flow from
-        arg2: The process to measure the flow to
+        process_from: The process to measure the flow from
+        process_to: The process to measure the flow to
+        bounds: Whether or not to calculate bounds
 
         Returns all flows between the process pair specified.
         """
         ...
 
     @overload
-    def flow(self, arg1: Resource) -> Sequence[Tuple[Process, Process, float]]:
+    def flow(
+        self, *, resource: Resource, bounds: bool = False
+    ) -> Sequence[Tuple[Process, Process, float]]:
         """
-        arg1: The resource to measure flows for
+        resource: The resource to measure flows for
+        bounds: Whether or not to calculate bounds
 
         Returns all flows for the resource specified
         """
         ...
 
     @overload
-    def flow(self, arg1: Process, arg2: Process, arg3: Resource) -> float:
+    def flow(
+        self, *, process_from: Process, bounds: bool = False
+    ) -> Sequence[Tuple[Resource, float]]:
         """
-        arg1: The process to measure the flow from
-        arg2: The process to measure the flow to
-        arg3: The resource to measure
+        process: The process material is flowing from
+        bounds: Whether or not to calculate bounds
+
+        Returns the sum of all outflows from this process for each resource
+        """
+        ...
+
+    @overload
+    def flow(
+        self,
+        *,
+        process_from: Process,
+        resource: Resource,
+        bounds: bool = False
+    ) -> float:
+        """
+        process_from: The process material is flowing from
+        resource: The resource that is flowing
+        bounds: Whether or not to calculate bounds
+
+        Returns the sum of all outflows from this process for this resource
+        """
+        ...
+
+    @overload
+    def flow(
+        self, *, process_to: Process, bounds: bool = False
+    ) -> Sequence[Tuple[Resource, float]]:
+        """
+        process: The process material is flowing into
+        bounds: Whether or not to calculate bounds
+
+        Returns the sum of all inflows into this process for each resource
+        """
+        ...
+
+    @overload
+    def flow(
+        self, *, process_to: Process, resource: Resource, bounds: bool = False
+    ) -> float:
+        """
+        process_to: The process material is flowing into
+        resource: The resource that is flowing
+        bounds: Whether or not to calculate bounds
+
+        Returns the sum of all inflows into this process for this resource
+        """
+        ...
+
+    @overload
+    def flow(
+        self,
+        *,
+        process_from: Process,
+        process_to: Process,
+        resource: Resource,
+        bounds: bool = False
+    ) -> float:
+        """
+        process_from: The process to measure the flow from
+        process_to: The process to measure the flow to
+        resource: The resource to measure
+        bounds: Whether or not to calculate bounds
 
         Returns the value of resource flow for the given process pair and resource
         """
@@ -187,16 +275,18 @@ class Measure(BoundedSolver):
 
     def flow(
         self,
-        arg1: Optional[Union[Process, Resource]] = None,
-        arg2: Optional[Process] = None,
-        arg3: Optional[Resource] = None,
+        *,
+        process_from: Optional[Process] = None,
+        process_to: Optional[Process] = None,
+        resource: Optional[Resource] = None,
+        bounds: bool = False
     ) -> Union[
         Sequence[Tuple[Process, Process, Resource, float]],
         Sequence[Tuple[Resource, float]],
         Sequence[Tuple[Process, Process, float]],
         float,
     ]:
-        if arg1 is None and arg2 is None and arg3 is None:
+        if process_from is None and process_to is None and resource is None:
             output = []
             for p1 in self._processes:
                 for p2 in self._processes:
@@ -213,7 +303,11 @@ class Measure(BoundedSolver):
                                 )
                             )
             return output
-        elif isinstance(arg1, Resource) and arg2 is None and arg3 is None:
+        elif (
+            resource is not None
+            and process_from is None
+            and process_to is None
+        ):
             output = []
             for p1 in self._processes:
                 for p2 in self._processes:
@@ -222,118 +316,101 @@ class Measure(BoundedSolver):
                             (
                                 p1,
                                 p2,
-                                self.flow_matrix[arg1.index][p1.index][
+                                self.flow_matrix[resource.index][p1.index][
                                     p2.index
                                 ],
                             )
                         )
             return output
-        elif isinstance(arg1, Process) and arg2 is not None and arg3 is None:
+        elif (
+            process_from is not None
+            and process_to is not None
+            and resource is None
+        ):
             output = []
             for r in self._resources:
                 output.append(
                     (
                         r,
-                        self.flow_matrix[r.index][arg1.index][arg2.index],
+                        self.flow_matrix[r.index][process_from.index][
+                            process_to.index
+                        ],
                     )
                 )
             return output
-        else:
-            assert arg1 is not None and arg2 is not None and arg3 is not None
-            assert isinstance(arg1, Process)
-            return self.flow_matrix[arg3.index][arg1.index][arg2.index]
-
-    @overload
-    def flow_from(self, process: Process) -> Sequence[Tuple[Resource, float]]:
-        """
-        process: The process material is flowing from
-
-        Returns the sum of all outflows from this process for each resource
-        """
-        ...
-
-    @overload
-    def flow_from(self, process: Process, resource: Resource) -> float:
-        """
-        process: The process material is flowing from
-        resource: The resource that is flowing
-
-        Returns the sum of all outflows from this process for this resource
-        """
-        ...
-
-    def flow_from(
-        self, process: Process, resource: Optional[Resource] = None
-    ) -> Union[Sequence[Tuple[Resource, float]], float]:
-        if resource is None:
+        elif (
+            process_from is not None
+            and process_to is None
+            and resource is None
+        ):
             return [
                 (
                     r,
                     calculate_incident_flow(
                         self.flow_matrix,
                         r.index,
-                        process.index,
+                        process_from.index,
                         flow_from=True,
                     ),
                 )
                 for r in self._resources
             ]
-        else:
+        elif (
+            process_from is not None
+            and process_to is None
+            and resource is not None
+        ):
             return calculate_incident_flow(
                 self.flow_matrix,
                 resource.index,
-                process.index,
+                process_from.index,
                 flow_from=True,
             )
-
-    @overload
-    def flow_to(self, process: Process) -> Sequence[Tuple[Resource, float]]:
-        """
-        process: The process material is flowing into
-
-        Returns the sum of all inflows into this process for each resource
-        """
-        ...
-
-    @overload
-    def flow_to(self, process: Process, resource: Resource) -> float:
-        """
-        process: The process material is flowing into
-        resource: The resource that is flowing
-
-        Returns the sum of all inflows into this process for this resource
-        """
-        ...
-
-    def flow_to(
-        self, process: Process, resource: Optional[Resource] = None
-    ) -> Union[Sequence[Tuple[Resource, float]], float]:
-        if resource is None:
+        elif (
+            resource is None
+            and process_to is not None
+            and process_from is None
+        ):
             return [
                 (
                     r,
                     calculate_incident_flow(
                         self.flow_matrix,
                         r.index,
-                        process.index,
+                        process_to.index,
                         flow_from=False,
                     ),
                 )
                 for r in self._resources
             ]
-        else:
+        elif (
+            resource is not None
+            and process_to is not None
+            and process_from is None
+        ):
             return calculate_incident_flow(
                 self.flow_matrix,
                 resource.index,
-                process.index,
+                process_to.index,
                 flow_from=False,
             )
+        else:
+            assert (
+                process_from is not None
+                and process_to is not None
+                and resource is not None
+            )
+            return self.flow_matrix[resource.index][process_from.index][
+                process_to.index
+            ]
 
     @overload
     def cumulative_resource(
         self, *, bounds: bool = False
     ) -> Sequence[Tuple[Process, Resource, float]]:
         """
+        bounds: Whether or not to calculate bounds
+
         Returns the amount of each resource used for the entire chain of processes that led to each process.
         """
         ...
@@ -343,7 +420,8 @@ class Measure(BoundedSolver):
         self, *, process: Process, bounds: bool = False
     ) -> Sequence[Tuple[Resource, float]]:
         """
-        arg1: The process using resource
+        process: The process using resource
+        bounds: Whether or not to calculate bounds
 
         Returns the amount of each resource used for the entire chain of processes that led to this process.
         """
@@ -354,7 +432,8 @@ class Measure(BoundedSolver):
         self, *, resource: Resource, bounds: bool = False
     ) -> Sequence[Tuple[Process, float]]:
         """
-        arg1: The resource we are measuring
+        resource: The resource we are measuring
+        bounds: Whether or not to calculate bounds
 
         Returns the amount of resource used for the entire chain of processes that led to each process.
         """
@@ -365,8 +444,9 @@ class Measure(BoundedSolver):
         self, *, process: Process, resource: Resource, bounds: bool = False
     ) -> float:
         """
-        arg1: The process using resource
-        arg2: The resource we are measuring
+        process: The process using resource
+        resource: The resource we are measuring
+        bounds: Whether or not to calculate bounds
 
         Returns the amount of resource used for the entire chain of processes that led to this process.
         """

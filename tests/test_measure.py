@@ -475,7 +475,7 @@ class TestFlow:
         self, farming_example_measure: Measure
     ):
         results = farming_example_measure.flow(
-            farming_example_measure._resources["hay"]
+            resource=farming_example_measure._resources["hay"]
         )
         assert len(results) == 6
         assert len(results[0]) == 3
@@ -491,8 +491,8 @@ class TestFlow:
         self, farming_example_measure: Measure
     ):
         results = farming_example_measure.flow(
-            farming_example_measure._processes["arable_farm"],
-            farming_example_measure._processes["dairy_farm"],
+            process_from=farming_example_measure._processes["arable_farm"],
+            process_to=farming_example_measure._processes["dairy_farm"],
         )
         assert len(results) == 2
         assert len(results[0]) == 2
@@ -506,9 +506,9 @@ class TestFlow:
         self, farming_example_measure: Measure
     ):
         results = farming_example_measure.flow(
-            farming_example_measure._processes["arable_farm"],
-            farming_example_measure._processes["dairy_farm"],
-            farming_example_measure._resources["hay"],
+            process_from=farming_example_measure._processes["arable_farm"],
+            process_to=farming_example_measure._processes["dairy_farm"],
+            resource=farming_example_measure._resources["hay"],
         )
         assert round(results, 3) == 20
 
@@ -518,8 +518,8 @@ class TestFlowTo:
     async def test_farming_flow_to_process(
         self, farming_example_measure: Measure
     ):
-        results = farming_example_measure.flow_to(
-            farming_example_measure._processes["dairy_farm"]
+        results = farming_example_measure.flow(
+            process_to=farming_example_measure._processes["dairy_farm"]
         )
         assert len(results) == 2
         assert len(results[0]) == 2
@@ -529,9 +529,9 @@ class TestFlowTo:
     async def test_farming_flow_to_process_and_resource(
         self, farming_example_measure: Measure
     ):
-        results = farming_example_measure.flow_to(
-            farming_example_measure._processes["dairy_farm"],
-            farming_example_measure._resources["hay"],
+        results = farming_example_measure.flow(
+            process_to=farming_example_measure._processes["dairy_farm"],
+            resource=farming_example_measure._resources["hay"],
         )
         assert round(results, 3) == 20
 
@@ -541,8 +541,8 @@ class TestFlowFrom:
     async def test_farming_flow_from_process(
         self, farming_example_measure: Measure
     ):
-        results = farming_example_measure.flow_from(
-            farming_example_measure._processes["arable_farm"]
+        results = farming_example_measure.flow(
+            process_from=farming_example_measure._processes["arable_farm"]
         )
         assert len(results) == 2
         assert len(results[0]) == 2
@@ -552,9 +552,9 @@ class TestFlowFrom:
     async def test_farming_flow_to_process_and_resource(
         self, farming_example_measure: Measure
     ):
-        results = farming_example_measure.flow_from(
-            farming_example_measure._processes["arable_farm"],
-            farming_example_measure._resources["hay"],
+        results = farming_example_measure.flow(
+            process_from=farming_example_measure._processes["arable_farm"],
+            resource=farming_example_measure._resources["hay"],
         )
         assert round(results, 3) == 20
 
