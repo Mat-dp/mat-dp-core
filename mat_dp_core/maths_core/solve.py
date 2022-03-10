@@ -1,5 +1,5 @@
 from functools import reduce
-from typing import List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 from numpy import ndarray
@@ -152,9 +152,13 @@ def solve(
     # TODO: optimise with callback
     # TODO: optimise method
 
-    options = {}
+    options: Dict[str, Any] = {}
+
     if maxiter is not None:
         options["maxiter"] = maxiter
+    if use_process_bounds:
+        options["sym_pos"] = False
+        options["lstsq"] = True
 
     if not allow_inconsistent_order_of_mag:
         coeff_order_range: float = get_order_ranges(np.array([coefficients]))[

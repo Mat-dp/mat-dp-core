@@ -53,6 +53,34 @@ def farming_example() -> Tuple[Resources, Processes]:
 
 
 @pytest.fixture
+def farming_example_bounds() -> Tuple[Resources, Processes]:
+    resources = Resources()
+    hay = resources.create("hay")
+    cow = resources.create("cow")
+
+    processes = Processes()
+    processes.create("arable_farm", (hay, (+1, 0.5, 1.5)))
+    processes.create("dairy_farm", (cow, +1), (hay, (-2, -2.5, -1.5)))
+    processes.create("mcdonalds", (cow, -1))
+    return resources, processes
+
+
+@pytest.fixture
+def farming_example_bounds_flow() -> Tuple[Resources, Processes]:
+    resources = Resources()
+    hay = resources.create("hay")
+    cow = resources.create("cow")
+
+    processes = Processes()
+    processes.create("arable_farm", (hay, (+1, 0.5, 1.5)))
+    processes.create(
+        "dairy_farm", (cow, (+1, 0.5, 1.5)), (hay, (-2, -2.5, -1.5))
+    )
+    processes.create("mcdonalds", (cow, (-1, -1.5, -0.5)))
+    return resources, processes
+
+
+@pytest.fixture
 def unscaled_farming_example() -> Tuple[Resources, Processes]:
     resources = Resources()
     hay = resources.create("hay")
@@ -68,6 +96,32 @@ def unscaled_farming_example() -> Tuple[Resources, Processes]:
 @pytest.fixture
 def farming_example_measure(farming_example) -> Measure:
     resources, processes = farming_example
+    constraints = [
+        EqConstraint("burger_consumption", processes["dairy_farm"], 10)
+    ]
+    objective = (
+        2 * (processes["arable_farm"] * 2 + 3 * processes["dairy_farm"]) * 2
+    )
+    return Measure(resources, processes, constraints, objective=objective)
+
+
+@pytest.fixture
+def farming_example_measure_bounds(farming_example_bounds) -> Measure:
+    resources, processes = farming_example_bounds
+    constraints = [
+        EqConstraint("burger_consumption", processes["dairy_farm"], 10)
+    ]
+    objective = (
+        2 * (processes["arable_farm"] * 2 + 3 * processes["dairy_farm"]) * 2
+    )
+    return Measure(resources, processes, constraints, objective=objective)
+
+
+@pytest.fixture
+def farming_example_measure_bounds_flow(
+    farming_example_bounds_flow,
+) -> Measure:
+    resources, processes = farming_example_bounds_flow
     constraints = [
         EqConstraint("burger_consumption", processes["dairy_farm"], 10)
     ]
