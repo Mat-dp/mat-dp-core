@@ -66,7 +66,7 @@ class TestSolvable:
             resources, processes, [constraint], objective=objective
         )
         assert np.array_equal(
-            np.round(solution._run_vector, 3), np.array([20, 10, 10])
+            np.round(solution.run_vector, 3), np.array([20, 10, 10])
         )
 
     async def test_simple_dairy_new_objective(self, farming_example):
@@ -79,7 +79,7 @@ class TestSolvable:
             resources, processes, [constraint], objective=objective
         )
         assert np.array_equal(
-            np.round(solution._run_vector, 3), np.array([20, 10, 10])
+            np.round(solution.run_vector, 3), np.array([20, 10, 10])
         )
 
     @pytest.mark.filterwarnings("ignore: A_eq")
@@ -398,70 +398,124 @@ class TestSolvable:
 
 @pytest.mark.asyncio
 class TestRun:
-    async def test_farming_all(self, farming_example_measure):
-        results = farming_example_measure.run()
+    async def test_farming_all(self, farming_example_measure, bounds_bool):
+        results = farming_example_measure.run(bounds=bounds_bool)
+
         assert len(results) == 3
-        assert len(results[0]) == 2
+        if bounds_bool:
+            assert len(results[0]) == 4
+            assert round(results[0][1], 3) == 20
+            assert round(results[0][2], 3) == 20
+            assert round(results[0][3], 3) == 20
+        else:
+            assert len(results[0]) == 2
+            assert round(results[0][1], 3) == 20
         assert (
             results[0][0] == farming_example_measure._processes["arable_farm"]
         )
-        assert round(results[0][1], 3) == 20
 
-    async def test_farming_specify_process(self, farming_example_measure):
+    async def test_farming_specify_process(
+        self, farming_example_measure, bounds_bool
+    ):
         results = farming_example_measure.run(
-            farming_example_measure._processes["arable_farm"]
+            process=farming_example_measure._processes["arable_farm"],
+            bounds=bounds_bool,
         )
-        assert round(results, 3) == 20
+        if bounds_bool:
+            assert round(results[0], 3) == 20
+            assert round(results[1], 3) == 20
+            assert round(results[2], 3) == 20
+        else:
+            assert round(results, 3) == 20
 
 
 @pytest.mark.asyncio
 class TestResource:
-    async def test_farming_all(self, farming_example_measure):
-        results = farming_example_measure.resource()
+    async def test_farming_all(self, farming_example_measure, bounds_bool):
+        results = farming_example_measure.resource(bounds=bounds_bool)
         assert len(results) == 6
-        assert len(results[0]) == 3
+        if bounds_bool:
+            assert len(results[0]) == 5
+            assert round(results[0][2], 3) == 20
+            assert round(results[0][3], 3) == 20
+            assert round(results[0][4], 3) == 20
+        else:
+            assert len(results[0]) == 3
+            assert round(results[0][2], 3) == 20
         assert (
             results[0][0] == farming_example_measure._processes["arable_farm"]
         )
         assert results[0][1] == farming_example_measure._resources["hay"]
-        assert round(results[0][2], 3) == 20
 
-    async def test_farming_specify_process(self, farming_example_measure):
+    async def test_farming_specify_process(
+        self, farming_example_measure, bounds_bool
+    ):
         results = farming_example_measure.resource(
-            farming_example_measure._processes["arable_farm"]
+            process=farming_example_measure._processes["arable_farm"],
+            bounds=bounds_bool,
         )
         assert len(results) == 2
-        assert len(results[0]) == 2
+        if bounds_bool:
+            assert len(results[0]) == 4
+            assert round(results[0][1], 3) == 20
+            assert round(results[0][2], 3) == 20
+            assert round(results[0][3], 3) == 20
+        else:
+            assert len(results[0]) == 2
+            assert round(results[0][1], 3) == 20
         assert results[0][0] == farming_example_measure._resources["hay"]
-        assert round(results[0][1], 3) == 20
 
-    async def test_farming_specify_resource(self, farming_example_measure):
+    async def test_farming_specify_resource(
+        self, farming_example_measure, bounds_bool
+    ):
         results = farming_example_measure.resource(
-            farming_example_measure._resources["hay"]
+            resource=farming_example_measure._resources["hay"],
+            bounds=bounds_bool,
         )
         assert len(results) == 3
-        assert len(results[0]) == 2
+        if bounds_bool:
+            assert len(results[0]) == 4
+            assert round(results[0][1], 3) == 20
+            assert round(results[0][2], 3) == 20
+            assert round(results[0][3], 3) == 20
+        else:
+            assert len(results[0]) == 2
+            assert round(results[0][1], 3) == 20
         assert (
             results[0][0] == farming_example_measure._processes["arable_farm"]
         )
-        assert round(results[0][1], 3) == 20
 
     async def test_farming_specify_resource_and_process(
-        self, farming_example_measure
+        self, farming_example_measure, bounds_bool
     ):
         results = farming_example_measure.resource(
-            farming_example_measure._resources["hay"],
-            farming_example_measure._processes["arable_farm"],
+            resource=farming_example_measure._resources["hay"],
+            process=farming_example_measure._processes["arable_farm"],
+            bounds=bounds_bool,
         )
-        assert round(results, 3) == 20
+        if bounds_bool:
+            assert round(results[0], 3) == 20
+            assert round(results[1], 3) == 20
+            assert round(results[2], 3) == 20
+        else:
+            assert round(results, 3) == 20
 
 
 @pytest.mark.asyncio
 class TestFlow:
-    async def test_farming_all(self, farming_example_measure: Measure):
-        results = farming_example_measure.flow()
+    async def test_farming_all(
+        self, farming_example_measure: Measure, bounds_bool
+    ):
+        results = farming_example_measure.flow(bounds=bounds_bool)
         assert len(results) == 12
-        assert len(results[0]) == 4
+        if bounds_bool:
+            assert len(results[0]) == 6
+            assert round(results[0][3], 3) == 20
+            assert round(results[0][4], 3) == 20
+            assert round(results[0][5], 3) == 20
+        else:
+            assert len(results[0]) == 4
+            assert round(results[0][3], 3) == 20
         assert (
             results[0][0] == farming_example_measure._processes["arable_farm"]
         )
@@ -469,133 +523,220 @@ class TestFlow:
             results[0][1] == farming_example_measure._processes["dairy_farm"]
         )
         assert results[0][2] == farming_example_measure._resources["hay"]
-        assert round(results[0][3], 3) == 20
 
     async def test_farming_specify_resource(
-        self, farming_example_measure: Measure
+        self, farming_example_measure: Measure, bounds_bool
     ):
         results = farming_example_measure.flow(
-            farming_example_measure._resources["hay"]
+            resource=farming_example_measure._resources["hay"],
+            bounds=bounds_bool,
         )
         assert len(results) == 6
-        assert len(results[0]) == 3
+        if bounds_bool:
+            assert len(results[0]) == 5
+            assert round(results[0][2], 3) == 20
+            assert round(results[0][3], 3) == 20
+            assert round(results[0][4], 3) == 20
+        else:
+            assert len(results[0]) == 3
+            assert round(results[0][2], 3) == 20
         assert (
             results[0][0] == farming_example_measure._processes["arable_farm"]
         )
         assert (
             results[0][1] == farming_example_measure._processes["dairy_farm"]
         )
-        assert round(results[0][2], 3) == 20
 
     async def test_farming_specify_process_pair(
-        self, farming_example_measure: Measure
+        self, farming_example_measure: Measure, bounds_bool
     ):
         results = farming_example_measure.flow(
-            farming_example_measure._processes["arable_farm"],
-            farming_example_measure._processes["dairy_farm"],
+            process_from=farming_example_measure._processes["arable_farm"],
+            process_to=farming_example_measure._processes["dairy_farm"],
+            bounds=bounds_bool,
         )
         assert len(results) == 2
-        assert len(results[0]) == 2
+        if bounds_bool:
+            assert len(results[0]) == 4
+            assert round(results[0][1], 3) == 20
+            assert round(results[0][2], 3) == 20
+            assert round(results[0][3], 3) == 20
+            assert len(results[1]) == 4
+            assert round(results[1][1], 3) == 0
+            assert round(results[1][2], 3) == 0
+            assert round(results[1][3], 3) == 0
+        else:
+            assert len(results[0]) == 2
+            assert round(results[0][1], 3) == 20
+            assert len(results[1]) == 2
+            assert round(results[1][1], 3) == 0
         assert results[0][0] == farming_example_measure._resources["hay"]
-        assert round(results[0][1], 3) == 20
-        assert len(results[1]) == 2
         assert results[1][0] == farming_example_measure._resources["cow"]
-        assert round(results[1][1], 3) == 0
 
     async def test_farming_specify_process_pair_and_resource(
-        self, farming_example_measure: Measure
+        self, farming_example_measure: Measure, bounds_bool
     ):
         results = farming_example_measure.flow(
-            farming_example_measure._processes["arable_farm"],
-            farming_example_measure._processes["dairy_farm"],
-            farming_example_measure._resources["hay"],
+            process_from=farming_example_measure._processes["arable_farm"],
+            process_to=farming_example_measure._processes["dairy_farm"],
+            resource=farming_example_measure._resources["hay"],
+            bounds=bounds_bool,
         )
-        assert round(results, 3) == 20
+        if bounds_bool:
+            assert isinstance(results, tuple)
+            assert len(results) == 3
+            assert round(results[0], 3) == 20
+            assert round(results[1], 3) == 20
+            assert round(results[2], 3) == 20
+        else:
+            assert isinstance(results, float)
+            assert round(results, 3) == 20
 
-
-@pytest.mark.asyncio
-class TestFlowTo:
     async def test_farming_flow_to_process(
-        self, farming_example_measure: Measure
+        self, farming_example_measure: Measure, bounds_bool
     ):
-        results = farming_example_measure.flow_to(
-            farming_example_measure._processes["dairy_farm"]
+        results = farming_example_measure.flow(
+            process_to=farming_example_measure._processes["dairy_farm"],
+            bounds=bounds_bool,
         )
         assert len(results) == 2
-        assert len(results[0]) == 2
+        if bounds_bool:
+            assert len(results[0]) == 4
+            assert round(results[0][1], 3) == 20
+            assert round(results[0][2], 3) == 20
+            assert round(results[0][3], 3) == 20
+        else:
+            assert len(results[0]) == 2
+            assert round(results[0][1], 3) == 20
         assert results[0][0] == farming_example_measure._resources["hay"]
-        assert round(results[0][1], 3) == 20
 
     async def test_farming_flow_to_process_and_resource(
-        self, farming_example_measure: Measure
+        self, farming_example_measure: Measure, bounds_bool
     ):
-        results = farming_example_measure.flow_to(
-            farming_example_measure._processes["dairy_farm"],
-            farming_example_measure._resources["hay"],
+        results = farming_example_measure.flow(
+            process_to=farming_example_measure._processes["dairy_farm"],
+            resource=farming_example_measure._resources["hay"],
+            bounds=bounds_bool,
         )
-        assert round(results, 3) == 20
+        if bounds_bool:
+            assert isinstance(results, tuple)
+            assert len(results) == 3
+            assert round(results[0], 3) == 20
+            assert round(results[1], 3) == 20
+            assert round(results[2], 3) == 20
+        else:
+            assert isinstance(results, float)
+            assert round(results, 3) == 20
 
-
-@pytest.mark.asyncio
-class TestFlowFrom:
     async def test_farming_flow_from_process(
-        self, farming_example_measure: Measure
+        self, farming_example_measure: Measure, bounds_bool
     ):
-        results = farming_example_measure.flow_from(
-            farming_example_measure._processes["arable_farm"]
+        results = farming_example_measure.flow(
+            process_from=farming_example_measure._processes["arable_farm"],
+            bounds=bounds_bool,
         )
         assert len(results) == 2
-        assert len(results[0]) == 2
+        if bounds_bool:
+            assert len(results[0]) == 4
+            assert round(results[0][1], 3) == 20
+            assert round(results[0][2], 3) == 20
+            assert round(results[0][3], 3) == 20
+        else:
+            assert len(results[0]) == 2
+            assert round(results[0][1], 3) == 20
         assert results[0][0] == farming_example_measure._resources["hay"]
-        assert round(results[0][1], 3) == 20
 
-    async def test_farming_flow_to_process_and_resource(
-        self, farming_example_measure: Measure
+    async def test_farming_flow_from_process_and_resource(
+        self, farming_example_measure: Measure, bounds_bool
     ):
-        results = farming_example_measure.flow_from(
-            farming_example_measure._processes["arable_farm"],
-            farming_example_measure._resources["hay"],
+        results = farming_example_measure.flow(
+            process_from=farming_example_measure._processes["arable_farm"],
+            resource=farming_example_measure._resources["hay"],
+            bounds=bounds_bool,
         )
-        assert round(results, 3) == 20
+        if bounds_bool:
+            assert isinstance(results, tuple)
+            assert len(results) == 3
+            assert round(results[0], 3) == 20
+            assert round(results[0], 3) == 20
+            assert round(results[0], 3) == 20
+        else:
+            assert isinstance(results, float)
+            assert round(results, 3) == 20
 
 
 @pytest.mark.asyncio
 class TestCumulativeResource:
-    async def test_farming_all(self, farming_example_measure):
-        results = farming_example_measure.cumulative_resource()
+    async def test_farming_all(self, farming_example_measure, bounds_bool):
+        results = farming_example_measure.cumulative_resource(
+            bounds=bounds_bool
+        )
         assert len(results) == 6
-        assert len(results[0]) == 3
+        if bounds_bool:
+            assert len(results[0]) == 5
+            assert round(results[0][2], 3) == 20
+            assert round(results[0][3], 3) == 20
+            assert round(results[0][4], 3) == 20
+        else:
+            assert len(results[0]) == 3
+            assert round(results[0][2], 3) == 20
+
         assert (
             results[0][0] == farming_example_measure._processes["arable_farm"]
         )
         assert results[0][1] == farming_example_measure._resources["hay"]
-        assert round(results[0][2], 3) == 20
 
-    async def test_farming_specify_process(self, farming_example_measure):
+    async def test_farming_specify_process(
+        self, farming_example_measure, bounds_bool
+    ):
         results = farming_example_measure.cumulative_resource(
-            farming_example_measure._processes["arable_farm"]
+            process=farming_example_measure._processes["arable_farm"],
+            bounds=bounds_bool,
         )
         assert len(results) == 2
-        assert len(results[0]) == 2
-        assert results[0][0] == farming_example_measure._resources["hay"]
-        assert round(results[0][1], 3) == 20
+        if bounds_bool:
+            assert len(results[0]) == 4
+            assert round(results[0][1], 3) == 20
+            assert round(results[0][2], 3) == 20
+            assert round(results[0][3], 3) == 20
+        else:
+            assert len(results[0]) == 2
+            assert round(results[0][1], 3) == 20
 
-    async def test_farming_specify_resource(self, farming_example_measure):
+        assert results[0][0] == farming_example_measure._resources["hay"]
+
+    async def test_farming_specify_resource(
+        self, farming_example_measure, bounds_bool
+    ):
         results = farming_example_measure.cumulative_resource(
-            farming_example_measure._resources["hay"]
+            resource=farming_example_measure._resources["hay"],
+            bounds=bounds_bool,
         )
         assert len(results) == 3
-        assert len(results[0]) == 2
+        if bounds_bool:
+            assert len(results[0]) == 4
+            assert round(results[0][1], 3) == 20
+            assert round(results[0][2], 3) == 20
+            assert round(results[0][3], 3) == 20
+        else:
+            assert len(results[0]) == 2
+            assert round(results[0][1], 3) == 20
         assert (
             results[0][0] == farming_example_measure._processes["arable_farm"]
         )
-        assert round(results[0][1], 3) == 20
 
     async def test_farming_specify_resource_and_process(
-        self, farming_example_measure
+        self, farming_example_measure, bounds_bool
     ):
         results = farming_example_measure.cumulative_resource(
-            farming_example_measure._resources["hay"],
-            farming_example_measure._processes["arable_farm"],
+            resource=farming_example_measure._resources["hay"],
+            process=farming_example_measure._processes["arable_farm"],
+            bounds=bounds_bool,
         )
-        assert round(results, 3) == 20
+
+        if bounds_bool:
+            assert round(results[0], 3) == 20
+            assert round(results[1], 3) == 20
+            assert round(results[2], 3) == 20
+        else:
+            assert round(results, 3) == 20

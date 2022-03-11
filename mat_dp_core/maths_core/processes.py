@@ -115,6 +115,14 @@ class Process:
     def array(self) -> ndarray:
         return self._parent._processes[self.index][1]
 
+    @property
+    def lb_array(self) -> ndarray:
+        return self._parent._processes[self.index][2]
+
+    @property
+    def ub_array(self) -> ndarray:
+        return self._parent._processes[self.index][3]
+
     def __mul__(self, other: float) -> ProcessExpr:
         new_proc = copy(self)
         new_proc.multiplier *= other
@@ -153,36 +161,59 @@ class Process:
             return self.index == other.index and self._parent == other._parent
 
 
+Produces = float
+LowerBound = float
+UpperBound = float
+CreateType = Union[
+    Tuple[Resource, Produces],
+    Tuple[Resource, Tuple[Produces, LowerBound, UpperBound]],
+]
+
+
 class Processes:
     # Maps process names to resource demands
-    _processes: MutableSequence[Tuple[ProcessName, ndarray]]
+    _processes: MutableSequence[Tuple[ProcessName, ndarray, ndarray, ndarray]]
     _process_produces: Optional[ndarray]  # (resources, processes)
+    _process_lower_bounds: Optional[ndarray]  # (resources, processes)
+    _process_upper_bounds: Optional[ndarray]  # (resources, processes)
+    _calculate_bounds: bool
 
     def __init__(self) -> None:
         self._processes = []
         self._process_produces = None
+        self._process_lower_bounds = None
+        self._process_upper_bounds = None
+        self._calculate_bounds = False
 
-    def create(
-        self, name: ProcessName, *resources: Tuple[Resource, float]
-    ) -> Process:
+    def create(self, name: ProcessName, *resources: CreateType) -> Process:
         if len(resources) == 0:
             raise ValueError(f"No resources attached to {name}")
         res_max_index = (
             max([resource.index for (resource, _) in resources]) + 1
         )
-        array = np.zeros(res_max_index)
-        for (resource, v) in resources:
+        produces_array = np.zeros(res_max_index)
+        lb_array = np.zeros(res_max_index)
+        ub_array = np.zeros(res_max_index, dtype=object)
+        for resource, item in resources:
             i = resource.index
-            array[i] = v
-        process_inner = (name, array)
+            if isinstance(item, tuple):
+                if not self._calculate_bounds:
+                    self._calculate_bounds = True
+                produces_array[i] = item[0]
+                lb_array[i] = item[1]
+                ub_array[i] = item[2]
+            else:
+                produces_array[i] = item
+                lb_array[i] = item
+                ub_array[i] = item
+
+        process_inner = (name, produces_array, lb_array, ub_array)
         self._processes.append(process_inner)
         return self[len(self._processes) - 1]
 
     def load(
         self,
-        processes: Sequence[
-            Tuple[ProcessName, Sequence[Tuple[Resource, float]]]
-        ],
+        processes: Sequence[Tuple[ProcessName, Sequence[CreateType]]],
     ) -> List[Process]:
         """
         Load some additional processes in bulk
@@ -197,7 +228,11 @@ class Processes:
             )
         )
 
-    def dump(self) -> Sequence[Tuple[ProcessName, ndarray]]:
+    def dump(
+        self,
+    ) -> Sequence[
+        Tuple[ProcessName, ndarray, Optional[ndarray], Optional[ndarray]]
+    ]:
         """
         Dump processes in bulk
         """
@@ -214,7 +249,9 @@ class Processes:
                 raise IndexError("list index out of range")
         else:
             results = [
-                i for i, (name, _) in enumerate(self._processes) if name == arg
+                i
+                for i, (name, _, _, _) in enumerate(self._processes)
+                if name == arg
             ]
             if len(results) == 0:
                 raise KeyError(f"'{arg}'")
@@ -240,12 +277,36 @@ class Processes:
     def process_produces(self) -> ndarray:
         if self._process_produces is None:
             max_resource_size = max([len(process.array) for process in self])
-            # Pad arrays out to the correct size:
-            # The processes weren't necessarily aware of the total number of
-            # resources at the time they were created
+
             for process in self:
                 process.array.resize(max_resource_size, refcheck=False)
             self._process_produces = np.transpose(
                 np.array([process.array for process in self])
             )
         return self._process_produces
+
+    @property
+    def process_produces_lb(self) -> ndarray:
+        if self._process_lower_bounds is None:
+            max_resource_size = max(
+                [len(process.lb_array) for process in self]
+            )
+            for process in self:
+                process.lb_array.resize(max_resource_size, refcheck=False)
+            self._process_lower_bounds = np.transpose(
+                np.array([process.lb_array for process in self])
+            )
+        return self._process_lower_bounds
+
+    @property
+    def process_produces_ub(self) -> ndarray:
+        if self._process_upper_bounds is None:
+            max_resource_size = max(
+                [len(process.ub_array) for process in self]
+            )
+            for process in self:
+                process.ub_array.resize(max_resource_size, refcheck=False)
+            self._process_upper_bounds = np.transpose(
+                np.array([process.ub_array for process in self])
+            )
+        return self._process_upper_bounds

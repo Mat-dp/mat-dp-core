@@ -19,7 +19,12 @@ def get_row_scales(array: ndarray) -> ndarray:
         )
         A_maxima = np.max(np.absolute(array), axis=1)
         scales = np.nan_to_num(
-            np.power(10, np.floor(np.log10(np.absolute(A_maxima))))
+            np.power(
+                10,
+                np.floor(
+                    np.log10(np.array(np.absolute(A_maxima), dtype=float))
+                ),
+            )
         )
         inv_scales = np.reciprocal(scales)
     return np.nan_to_num(inv_scales)
@@ -36,7 +41,7 @@ def get_order_ranges(array: ndarray) -> ndarray:
         warnings.filterwarnings(
             "ignore", "divide by zero encountered in log10"
         )
-        mags = np.log10(np.absolute(array))
+        mags = np.log10(np.array(np.absolute(array), dtype=float))
     order_ranges = []
     for res in mags:
         new_res_list = []
