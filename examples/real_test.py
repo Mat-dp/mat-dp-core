@@ -40,6 +40,9 @@ constraints = [wind_con, coal_con, solar_con]
 print(constraints)
 # Minimise run total
 
+
+# this is also the default setup, minimise all runs
+# minus sign to maximise
 objective = (
     concrete_producer
     + steel_producer
@@ -50,6 +53,11 @@ objective = (
     + coal
     + energy_producer
 )
+
+# - environment (consumes C02 -> 0 ) x runs per unit of CO2
+# ^^ important use case (do last)
+
+# to solve for CO2, make a process
 
 solution = Measure(resources, processes, constraints, objective)
 print(solution.run_vector)
