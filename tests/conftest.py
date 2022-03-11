@@ -14,6 +14,14 @@ from mat_dp_core import (
 from mat_dp_core.maths_core.resources import Resource
 
 
+@pytest.fixture(
+    params=[True, False],
+    ids=["bounds", "no_bounds"],
+)
+def bounds_bool(request) -> bool:
+    return request.param
+
+
 @pytest.fixture
 def test_resource() -> Resource:
     resources = Resources()
