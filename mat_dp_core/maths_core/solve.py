@@ -191,6 +191,7 @@ def solve(
                 le_constraints=le_constraints,
                 eq_matrix=A_eq,
                 le_matrix=A_le,
+                use_process_bounds=use_process_bounds,
             )
 
     coeff_scale = get_row_scales(np.array([coefficients]))[0]

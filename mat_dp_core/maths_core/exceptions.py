@@ -221,11 +221,17 @@ class InconsistentOrderOfMagnitude(Exception):
         le_constraints: List[LeConstraint],
         eq_matrix: np.ndarray,
         le_matrix: np.ndarray,
+        use_process_bounds: bool,
     ):
         def get_inconsistencies(
             order_limit: float,
             order_range: np.ndarray,
-            group: Union[Resources, List[EqConstraint], List[LeConstraint]],
+            group: Union[
+                Resources,
+                List[EqConstraint],
+                List[LeConstraint],
+                List[Resource],
+            ],
             processes: Processes,
             matrix: np.ndarray,
             matrix_start_row: int = 0,
@@ -259,37 +265,63 @@ class InconsistentOrderOfMagnitude(Exception):
             optional_objective = (objective, coeff_order_range)
         else:
             optional_objective = None
-        if eq_order_inconsistent:
+
+        if use_process_bounds:
+            """
+            Impossible for eq_order to be inconsistent in this case,
+            and for le_order not to be inconsistent - it must have succeeded
+            the first solve
+            """
+            assert not eq_order_inconsistent
+            assert le_order_inconsistent
             resource_inconsistencies = get_inconsistencies(
                 order_limit,
-                eq_order_range[: len(resources)],
-                resources,
-                processes,
-                eq_matrix,
-            )
-            eq_inconsistencies = get_inconsistencies(
-                order_limit,
-                eq_order_range[len(resources) :],
-                eq_constraints,
-                processes,
-                eq_matrix,
-                matrix_start_row=len(resources),
-            )
-
-        else:
-            resource_inconsistencies = []
-            eq_inconsistencies = []
-        if le_order_inconsistent:
-            le_inconsistencies = get_inconsistencies(
-                order_limit,
-                le_order_range,
-                le_constraints,
+                le_order_range[: len(resources) * 2],
+                list(resources) + list(resources),
                 processes,
                 le_matrix,
             )
-
+            le_inconsistencies = get_inconsistencies(
+                order_limit,
+                le_order_range[len(resources) * 2 :],
+                le_constraints,
+                processes,
+                le_matrix,
+                matrix_start_row=len(resources) * 2,
+            )
+            eq_inconsistencies = []
         else:
-            le_inconsistencies = []
+            if eq_order_inconsistent:
+                resource_inconsistencies = get_inconsistencies(
+                    order_limit,
+                    eq_order_range[: len(resources)],
+                    resources,
+                    processes,
+                    eq_matrix,
+                )
+                eq_inconsistencies = get_inconsistencies(
+                    order_limit,
+                    eq_order_range[len(resources) :],
+                    eq_constraints,
+                    processes,
+                    eq_matrix,
+                    matrix_start_row=len(resources),
+                )
+
+            else:
+                resource_inconsistencies = []
+                eq_inconsistencies = []
+            if le_order_inconsistent:
+                le_inconsistencies = get_inconsistencies(
+                    order_limit,
+                    le_order_range,
+                    le_constraints,
+                    processes,
+                    le_matrix,
+                )
+
+            else:
+                le_inconsistencies = []
 
         return cls(
             optional_objective,
