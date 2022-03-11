@@ -54,5 +54,5 @@ objective = (
 solution = Measure(resources, processes, constraints, objective)
 print(solution.run_vector)
 
-result = solution.resource(energy)
+result = solution.resource(resource=energy)
 print(result)

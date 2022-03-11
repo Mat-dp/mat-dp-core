@@ -57,5 +57,5 @@ from pprint import pprint
 
 print(measurement.run_vector)
 print("flow", measurement.resource())
-print(measurement.resource(pizza_box))
+print(measurement.resource(resource=pizza_box))
 pprint(measurement.cumulative_resource())
