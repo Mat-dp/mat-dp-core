@@ -44,7 +44,10 @@ It contains methods to create, access, and otherwise handle resource data.
 **Summary:**  
 *Creates a resource, storing it with the calling ```Resources``` object. This is the conventional way to create a new resource for a system.*
 
-**Parameters:** ```name``` string, ```unit``` string (*optional, default: ```"ea"```*)
+**Parameters:**
+
+* ```name``` string,
+* ```unit``` string (*optional - default:* ```"ea"```)
 
 **Return Type:** resource (*Specifically, returns the  resource you just created. Assignment of this returned object is advised and necessary for use.*)
 
@@ -195,8 +198,8 @@ print(numberOfResources)
 
 
 -->
-
+<!-- Non-essential, covering more vital content first
 ## **Resource** Class (*Advanced*)
 
-The ```Resource``` object 
-<!-- Necessary? -->
+The ```Resource``` object is not intended for end-users.  
+Nevertheless, advanced users may find some of its properties or methods useful. It is important not to instantiate the ```Resource``` object without using the ```Resources.create()``` method, otherwise the resource will be ignored. -->
