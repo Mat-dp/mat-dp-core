@@ -1,4 +1,4 @@
-# Processes
+# *mat_dp_core.***Processes**
 
 ## Conceptual Overview
 
@@ -17,23 +17,15 @@ Some simplified examples are below:
 Note: a process can have any number or combination of input and outputs resources.
 <!-- TODO: Check this is true -->
 
-## **Processes** Class
-
-### Overview
+## **Processes()**
 
 The ```Processes``` class is responsible for the management of several processes.  
 In all cases, just one ```Processes``` object is made to handle these. The way processes are created and managed by this object is very similar to instances of the ```Resources``` class.
 
 ---
 
-### \_\_init\_\_()
-
 **Summary:**  
 *Creates an instance of the ```Processes``` class, which is mandatory in any MAT-DP solution.*
-
-**Parameters:**
-
-* ```n/a```
 
 **Return Type:**  ```Processes```
 

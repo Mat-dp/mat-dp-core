@@ -1,35 +1,10 @@
-# Constraints
+# *mat_dp_core.***constraints**
 
-## Conceptual Overview
-
-Constraints specify the conditions under which a system operates.  
-MAT-DP Core exposes several types of constraint to help researchers assess systems under a variety of conditions.
-
-Some examples:  
-
-* A given town will always consume water at 3,000 cubic metres/day: no more, no less.  
-  *This can be expressed as an equal to (cycles == 3000) constraint.*
-
-* A certain cardboard factory will never produce any less than 4 tonnes of waste paper/day.
-  *This can be expressed as a greater than or equal to (cycles >= 4) constraint*
-
-* An energy firm has agreed to reduce its coal use, but to no less than 10 tonnes/day.  
-  *This can be expressed as a less than or equal to (cycles <= -10) constraint.*
-
-Constraints make more sense in the context of an objective; try to imagine how constraints are useful in describing a system in the context of an operational objective.  
-You may wish to maximise the operation of a certain process, and/or minimise the operation of another.
-
-
-## **Constraints** Classes
-
-### Overview
-
-There are three core Constraints classes: ```GeConstraint```, ```LeConstraint```, and ```EqConstraint```.  
+There are three advanced Constraints: ```GeConstraint```, ```LeConstraint```, and ```EqConstraint```.  
 Each of these can be used to express the conditions of a system. Constraints can be hard to devise, but should be straightforward to implement.
 
-There are three 'further' Constraints classes, intended to be helpful in MAT-DP research contexts, these are: ```RunEqConstraint```, ```RunRatioConstraint```, and ```ResourceConstraint```.
 
-### **GeConstraint** \_\_init\_\_()
+### **GeConstraint** 
 
 **Summary:**  
 *The Ge ('greater than or equal to') Constraint class can be used to assert a given process runs __at least__ ```n``` times.*
@@ -72,7 +47,7 @@ print(constraint)
 ---
 
 
-### **LeConstraint** \_\_init\_\_()
+### **LeConstraint** 
 
 **Summary:**  
 *The Le ('less than or equal to') Constraint class can be used to assert a given process runs __at most__ ```n``` times.*
@@ -115,7 +90,8 @@ print(constraint)
 ---
 
 
-### **EqConstraint** \_\_init\_\_()
+
+### **EqConstraint**
 
 **Summary:**  
 *The Eq ('equal to') Constraint class can be used to assert a given process runs __exactly__ ```n``` times.*
@@ -157,67 +133,3 @@ print(constraint)
 
 ---
 
-## **Further Constraints** Classes
-
-### **RunEqConstraint** \_\_init\_\_()
-
-**Summary:**  
-*Text*
-
-**Parameters:**
-
-* ```var```
-  *Description*
-
-**Return Type:**  ```type```
-
-**Location:** ```further_constraints.py - class RunEqConstraint```
-
-**Example Code:**
-```
-# Comment code
-```
-
----
-
-### **RunRatioConstraint** \_\_init\_\_()
-
-**Summary:**  
-*Text*
-
-**Parameters:**
-
-* ```var```
-  *Description*
-
-**Return Type:**  ```type```
-
-**Location:** ```further_constraints.py - class RunRatioConstraint```
-
-**Example Code:**
-```
-# Comment code
-```
-
----
-
-### **ResourceConstraint** \_\_init\_\_()
-
-**Summary:**  
-*Text*
-
-**Parameters:**
-
-* ```var```
-  *Description*
-
-**Return Type:**  ```type```
-
-**Location:** ```further_constraints.py - class ResourceConstraint```
-
-**Example Code:**
-```
-# Comment code
-```
-
----

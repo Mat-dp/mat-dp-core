@@ -1,4 +1,4 @@
-# Exceptions
+# **Exceptions**
 
 ## Orders of Magnitude
 

@@ -1,6 +1,4 @@
-# Resources
-
-## Conceptual Overview
+# *mat_dp_core.***Resources**
 
 For the purposes of MAT-DP, a resource can be any quantifiable direct input (consumption) or output (production) of a process. In a system being used for typical MAT-DP related research, each resource is likely to be a material.
 
@@ -12,34 +10,30 @@ For example, in some hypothetical systems:
 
 Once again: *any* quantifiable direct input or output of an industrial process can be regarded as a resource for the purposes of a MAT-DP core system.
 
-## **Resources** Class
-
-### Overview
+## **Resources()**
 
 The ```Resources``` object serves to manage different resources, such as "steel", or "hay".  
 It contains methods to create, access, and otherwise handle resource data.
 
 ---
 
-### .\_\_init\_\_()
-
 **Summary:**  
-*Creates an instance of the ```Resources``` object, which is mandatory in any typical MAT-DP solution.*
-
-**Parameters:**  
-
-* ```n/a```
+*Create an instance of the ```Resources``` object, which is mandatory in any typical MAT-DP solution.*
 
 **Return Type:** ```Resources```
 
 **Location:** ```resources.py - class Resources```
 
 **Example Code:**  
-```r = Resources() # creates a Resources object, assigns it to variable 'r'```
+```
+from mat_dp_core import Resources
+r = Resources() # creates a Resources object, assigns it to variable 'r'
+```
 
 ---
+## **Methods**
 
-### .create()
+### `.create()`
 
 **Summary:**  
 *Creates a resource, storing it with the calling ```Resources``` object. This is the conventional way to create a new resource for a system.*
@@ -65,7 +59,7 @@ wh = r.create(name="wheat", unit="bale")
 
 ---
 
-### .load()
+### `.load()`
 
 **Summary:**  
 *Loads resource data from a conventional List of Tuples in format ```[(ResourceName, Unit), [...], (ResourceName, Unit)]```. This method is especially useful for loading in data created by the ```dump()``` method, and appropriately formatted large sets of resource data.*
@@ -88,7 +82,7 @@ hayWheatBarley = r.load(myInputList)
 
 ---
 
-### .dump()
+### `.dump()`
 
 **Summary:**  
 *Returns a tuple list representation of all resources existing in this ```Resources``` object's context.*
@@ -118,18 +112,14 @@ print(myTupleList)
 
 ---
 
-### .\_\_len\_\_()
+## **Length**
 
 **Summary:**  
-*Returns the number of resources currently managed by the calling ```Resources``` object.*
-
-**Parameters:**
-
-* ```n/a```
+*The number of resources currently managed by a ```Resources``` instance.*
 
 **Return Type:**  ```int```
 
-**Location:** ```fil.py - class ClassName```
+**Location:** ```resources.py - class Resources```
 
 **Example Code:**
 ```
