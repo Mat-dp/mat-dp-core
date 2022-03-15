@@ -1,8 +1,6 @@
 # *mat_dp_core.***Processes**
 
-## Conceptual Overview
-
-In the abstract, a process is any describable entity or recurrence that consumes and/or produces resources within a system.  
+In the abstract, a process is any describable entity or recurrence that consumes and/or produces [resources](resources.md) within a system.  
 In a system typical of MAT-DP related research, a process is likely to be associated with a factory, business, or an entire industry.
 
 Some simplified examples are below:
@@ -39,6 +37,8 @@ p = Processes() # variable 'p' is now an instance a 'Processes' object
 ```
 
 ---
+
+## **Methods**
 
 ### .create()
 
@@ -190,7 +190,7 @@ for entry in dumpVariable:
 
 ---
 
-### .\_\_len\_\_()
+## Length
 
 **Summary:**  
 *Returns the number of processes currently managed by the calling ```Processes``` object.*

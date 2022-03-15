@@ -3,6 +3,8 @@
 There are three advanced Constraints: ```GeConstraint```, ```LeConstraint```, and ```EqConstraint```.  
 Each of these can be used to express the conditions of a system. Constraints can be hard to devise, but should be straightforward to implement.
 
+<!-- TODO: redo according to what mark said, about being able to make expressions within constraints eg:
+LeConstraint("wood and wool below 50", lumberMill + wool, 50) -->
 
 ### **GeConstraint** 
 
