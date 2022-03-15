@@ -68,7 +68,7 @@ wh = r.create(name="wheat", unit="bale")
 ### .load()
 
 **Summary:**  
-*Loads resource object data from a conventional List of Tuples in format ```[(ResourceName, Unit), [...], (ResourceName, Unit)]```. This method is especially useful for loading in data created by the ```dump()``` method, and appropriately formatted large sets of resource data.*
+*Loads resource data from a conventional List of Tuples in format ```[(ResourceName, Unit), [...], (ResourceName, Unit)]```. This method is especially useful for loading in data created by the ```dump()``` method, and appropriately formatted large sets of resource data.*
 
 **Parameters:**
 
@@ -121,7 +121,7 @@ print(myTupleList)
 ### .\_\_len\_\_()
 
 **Summary:**  
-*Gets the number of resources currently managed by the calling ```Resources``` object.*
+*Returns the number of resources currently managed by the calling ```Resources``` object.*
 
 **Parameters:**
 
