@@ -10,9 +10,9 @@ Some simplified examples are below:
 - A business that manufactures cars may be considered a process.  
   (inputs "engine block", outputs "vehicles")
 - On a regional scale, the gas turbine industry of a country might be considered a process.  
-  (inputs "gas", outputs "electricity" and "CO2")
+  (inputs "natural gas", outputs "electricity" and "CO2")
 
-Note: a process can have any number or combination of input and outputs resources.
+Note: a process can have any number or combination of input and output resources.
 <!-- TODO: Check this is true -->
 
 ## **Processes()**

@@ -1,12 +1,20 @@
 # *mat_dp_core.***constraints**
 
 There are three advanced Constraints: ```GeConstraint```, ```LeConstraint```, and ```EqConstraint```.  
-Each of these can be used to express the conditions of a system. Constraints can be hard to devise, but should be straightforward to implement.
+Each of these can be used to express the conditions of a system in the form of a *constraint expression*. Constraint expressions can be hard to devise, but after this should be straightforward to implement.
 
 <!-- TODO: redo according to what mark said, about being able to make expressions within constraints eg:
 LeConstraint("wood and wool below 50", lumberMill + wool, 50) -->
 
-### **GeConstraint** 
+### **Constraint Expressions**
+
+**Overview:**
+
+**Explanation:**
+
+**Example Code:**
+
+### **GeConstraint()** 
 
 **Summary:**  
 *The Ge ('greater than or equal to') Constraint class can be used to assert a given process runs __at least__ ```n``` times.*
@@ -16,8 +24,8 @@ LeConstraint("wood and wool below 50", lumberMill + wool, 50) -->
 * ```name```  
   *A string name for this constraint*
 
-* ```process```  
-  *The process variable to be constrained*
+* ```weighted_processes``` process variable, or a process expression  
+  *The process variable to be constrained, or a valid process expression.*
 
 * ```bound```  
   *A float value representing the number of cycles this process must be greater than or equal to.*
@@ -49,7 +57,7 @@ print(constraint)
 ---
 
 
-### **LeConstraint** 
+### **LeConstraint()** 
 
 **Summary:**  
 *The Le ('less than or equal to') Constraint class can be used to assert a given process runs __at most__ ```n``` times.*
@@ -59,8 +67,8 @@ print(constraint)
 * ```name```  
   *A string name for this constraint*
 
-* ```process```  
-  *The process variable to be constrained*
+* ```weighted_processes``` process variable, or a process expression  
+  *The process variable to be constrained, or a valid process expression.*
 
 * ```bound```  
   *A float value representing the number of cycles this process must be less than or equal to.*
@@ -93,7 +101,7 @@ print(constraint)
 
 
 
-### **EqConstraint**
+### **EqConstraint()**
 
 **Summary:**  
 *The Eq ('equal to') Constraint class can be used to assert a given process runs __exactly__ ```n``` times.*
@@ -103,8 +111,8 @@ print(constraint)
 * ```name```  
   *A string name for this constraint*
 
-* ```process```  
-  *The process variable to be constrained*
+* ```weighted_processes``` process variable, or a process expression  
+  *The process variable to be constrained, or a valid process expression.*
 
 * ```bound```  
   *A float value representing the number of cycles this process must run.*

@@ -25,9 +25,9 @@ constraint = EqConstraint("burger consumption", mcdonalds, 10)
 # ge greater than or equal to
 
 # Minimise total number of runs
-# objective = arable_farm + dairy_farm + 2 * mcdonalds
+objective = arable_farm + dairy_farm + 2 * mcdonalds
 
-solution = Measure(resources, processes, [constraint])
+solution = Measure(resources, processes, [constraint], objective)
 
 print(solution.run(bounds=True)) # tells you how many runs for each process
 print(solution.cumulative_resource(bounds=True)) # sankey output

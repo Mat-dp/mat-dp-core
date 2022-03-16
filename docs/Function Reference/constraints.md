@@ -24,20 +24,20 @@ There are three core Constraints, intended to be helpful in MAT-DP research cont
 ### **RunEqConstraint()**
 
 **Summary:**  
-*Run Equal (to) Constraint states that a given process must run exactly 'n' times.*
+*Run Equal (to) Constraint states that a given process must run exactly `n` times.*
 
 **Parameters:**
 
-* ```process```  
+* ```process``` process variable  
   *The process variable of choice.*
 
-* ```runs```  
+* ```runs``` float  
   *A float value stating the number of runs this process should be constrained to do.*
 
-* ```name```  
+* ```name``` string  
   *A string representation of the constraint.*
 
-**Return Type:**  ```type```
+**Return Type:**  ```RunEqConstraint```
 
 **Location:** ```further_constraints.py - class RunEqConstraint```
 
@@ -71,19 +71,19 @@ For example, a Wheel Factory may run at a fixed ratio to its corresponding Car F
 
 **Parameters:**
 
-* ```process1```  
+* ```process1``` process variable  
   *The process to fix against another.*
 
-* ```process2```  
+* ```process2```  process variable  
   *The other process*
 
-* ```p2_over_p1```  
+* ```p2_over_p1``` float  
   *A float value representing the fixed cycles of process1 vs process2*
 
-* ```name```  
-  *Description*
+* ```name``` string  
+  *A string representation of the constraint.*
 
-**Return Type:**  ```type```
+**Return Type:**  ```RunRatioConstraint```
 
 **Location:** ```further_constraints.py - class RunRatioConstraint```
 
@@ -99,7 +99,7 @@ p = Processes()
 flourMachine = p.create("flour maker", (flour, -0.7))
 breadMachine = p.create("bread maker", (bread, 1))
 
-constraint = RunRatioConstraint(flourMachine, breadMachine, 4, "fixed ratio of flour to bread at 4:1")
+constraint = RunRatioConstraint(flourMachine, breadMachine, 4, "fixed run ratio of bread to flour at 4:1")
 
 # For display purposes:
 print(constraint)
@@ -113,20 +113,44 @@ print(constraint)
 ### **ResourceConstraint()**
 
 **Summary:**  
-*Text*
+*Sets the number runs of a process in relation to its production or consumption of a resource.  
+See the example code for more details.*
 
 **Parameters:**
 
-* ```var```
-  *Description*
+* ```resource``` resource variable  
+  *The resource variable to be constrained in its production or consumption.*
 
-**Return Type:**  ```type```
+* ```process``` process variable  
+  *The process variable to be constrained.*
+
+* ```resource_bound``` float  
+  *The float value give to the production or consumption a resource involved in this process.*
+
+* ```name``` string  
+  *A string representation of the constraint.*
+
+**Return Type:**  ```ResourceConstraint```
 
 **Location:** ```further_constraints.py - class ResourceConstraint```
 
 **Example Code:**
 ```
-# Comment code
+from mat_dp_core import Resources, Processes, ResourceConstraint
+
+r = Resources()
+flour = r.create(name="flour", unit="kilos")
+
+p = Processes() 
+flourMachine = p.create("flour maker", (flour, -0.7))
+
+constraint = ResourceConstraint(resource=flour, process=flourMachine, resource_bound=4, name="Fixed output of flour at 4 units")
+
+# For display purposes:
+print(constraint)
+"""
+>>> <ResourceConstraint: Fixed output of flour at 4 units | Equation:flour maker == 5.714285714285714>
+"""
 ```
 
 ---
