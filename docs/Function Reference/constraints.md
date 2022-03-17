@@ -42,7 +42,7 @@ There are three core Constraints, intended to be helpful in MAT-DP research cont
 **Location:** ```further_constraints.py - class RunEqConstraint```
 
 **Example Code:**
-```
+```py
 from mat_dp_core import Resources, Processes, RunEqConstraint
 
 r = Resources()
@@ -88,7 +88,7 @@ For example, a Wheel Factory may run at a fixed ratio to its corresponding Car F
 **Location:** ```further_constraints.py - class RunRatioConstraint```
 
 **Example Code:**
-```
+```py
 from mat_dp_core import Resources, Processes, RunRatioConstraint
 
 r = Resources()
@@ -135,7 +135,7 @@ See the example code for more details.*
 **Location:** ```further_constraints.py - class ResourceConstraint```
 
 **Example Code:**
-```
+```py
 from mat_dp_core import Resources, Processes, ResourceConstraint
 
 r = Resources()

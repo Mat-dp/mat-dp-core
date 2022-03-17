@@ -30,7 +30,7 @@ In all cases, just one ```Processes``` object is made to handle these. The way p
 **Location:** ```processes.py - class Processes```
 
 **Example Code:**
-```
+```py
 from mat_dp_core import Processes
 
 p = Processes() # variable 'p' is now an instance a 'Processes' object
@@ -64,7 +64,7 @@ p = Processes() # variable 'p' is now an instance a 'Processes' object
 **Location:** ```processes.py - class Processes```
 
 **Example Code:**
-```
+```py
 from mat_dp_core import Resources, Processes
 
 # A process cannot exist without its resource, so we create those first.
@@ -114,7 +114,7 @@ for process in p:
 **Parameters:**
 
 * ```processes```  
-  ```
+  ```py
   List[Tuple[processName Tuple[resourceVariable, rate]]] /
   List[Tuple[processName Tuple[resourceVariable, Tuple[rate, low-bound rate, up-bound rate]]]]
   ```  
@@ -129,7 +129,7 @@ for process in p:
 **Location:** ```processes.py - class Processes```
 
 **Example Code:**
-```
+```py
 from mat_dp_core import Resources, Processes
 
 r = Resources()
@@ -166,7 +166,7 @@ for process in p:
 **Location:** ```processes.py - class Processes```
 
 **Example Code:**
-```
+```py
 from mat_dp_core import Resources, Processes
 
 r = Resources()
@@ -204,7 +204,7 @@ for entry in dumpVariable:
 **Location:** ```processes.py - class Processes```
 
 **Example Code:**
-```
+```py
 from mat_dp_core import Resources, Processes
 
 r = Resources()

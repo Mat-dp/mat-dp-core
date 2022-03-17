@@ -25,7 +25,7 @@ It contains methods to create, access, and otherwise handle resource data.
 **Location:** ```resources.py - class Resources```
 
 **Example Code:**  
-```
+```py
 from mat_dp_core import Resources
 r = Resources() # creates a Resources object, assigns it to variable 'r'
 ```
@@ -48,7 +48,7 @@ r = Resources() # creates a Resources object, assigns it to variable 'r'
 **Location:** ```resources.py - class Resources```
 
 **Example Code:**  
-```
+```py
 from mat_dp_core import Resources
 
 r = Resources()
@@ -74,7 +74,7 @@ wh = r.create(name="wheat", unit="bale")
 **Location:** ```resources.py - class Resources```
 
 **Example Code:**
-```
+```py
 r = Resource()
 myInputList = [("hay", "ea"), ("wheat", "kegs"), ("barley", "barrels")] # List of tuples containing the data we wish to load
 hayWheatBarley = r.load(myInputList)
@@ -96,7 +96,7 @@ hayWheatBarley = r.load(myInputList)
 **Location:** ```resources.py - class Resources```
 
 **Example Code:**
-```
+```py
 from mat_dp_core import Resources
 
 r = Resources()
@@ -122,7 +122,7 @@ print(myTupleList)
 **Location:** ```resources.py - class Resources```
 
 **Example Code:**
-```
+```py
 from mat_dp_core import Resources
 
 r = Resources()

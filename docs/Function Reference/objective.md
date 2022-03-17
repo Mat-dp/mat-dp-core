@@ -7,11 +7,13 @@ An objective function in MAT-DP Core is expressed very similarly to a [constrain
 
 ---
 
+## **Explanation**
+
 An objective function will always aim to minimise its result.  
 
 Below is an example of a minimising objective function:
 
-```
+```py
 objective = 5 * coal_power_plant + gas_power_plant + 4 * oil_power_plant
 ```
 
@@ -22,15 +24,20 @@ As a consequence of the `5 * ` weighting, during Measurement the solution will f
 
 ---
 
+## **Worked Example**
+
 An objective makes the most sense in the context of an optimisation problem.
 
-Below is an optimisation problem concerning how to provide a power grid with sufficient kwh of electricity. The constraints involve not exceeding the capacity of each plant, while meeting the demand of the grid.
+Below is an optimisation problem concerning how to provide a power grid with sufficient kwh of electricity, while minimizing CO2 release. The constraints involve not exceeding the capacity of each plant, while still meeting the demand of the grid.
 
 There exists the following processes:
 
 * A coal power plant, producing 100kwh for every 1 tonnes of CO2.
 * A gas power plant, producing 100kwh for every 0.6 tonnes of CO2.
 * An organic waste power plant, producing 100kwh for every 0.8 tonnes of CO2.
+* The atmosphere, which consumes any produced CO2.
+* The Energy grid, which consumes any produced electricity.  
+  *In a MAT-DP Core system, any produced resource must be eventually consumed - unless otherwise specified.*
 
 The following constraints:
 
@@ -45,6 +52,29 @@ The optimisation objective of:
 
 Let's break the above problem into code:
 
-```
+```py
+from mat_dp_core import Resources, Processes, GeConstraint, LeConstraint, Measure
 
+r = Resources()
+electricity = r.create("electricity", "kwh")
+carbon_dioxide = r.create("CO2", "tonnes")
+
+p = Processes()
+coal_plant = p.create("Coal Power Plant", (carbon_dioxide, 1), (electricity, 100))
+gas_plant = p.create("Gas Power Plant", (carbon_dioxide, 0.6), (electricity, 100))
+organic_plant = p.create("Organic Mass Power Plant", (carbon_dioxide, 0.8), (electricity, 100))
+environment = p.create("The Atmosphere", (carbon_dioxide, -1))
+grid = p.create("The Energy Grid", (electricity, -100))
+
+coal_capacity = LeConstraint("Coal Plant Capacity 2,000kwh", coal_plant, 20)
+gas_capacity = LeConstraint("Gas Plant Capacity 1,500kwh", gas_plant, 15)
+organic_capacity = LeConstraint("Organic Plant Capacity 1,000kwh", organic_plant, 10)
+grid_needs = GeConstraint("Grid Requirement of 2,200kwh", grid, 22)
+
+constraints = [coal_capacity, gas_capacity, organic_capacity, grid_needs]
+
+# Objective function:
+# objective = 1 * coal_plant + 0.8 * organic_plant + 0.6 * gas_plant
+# Is equivalent to:
+objective = environment
 ```

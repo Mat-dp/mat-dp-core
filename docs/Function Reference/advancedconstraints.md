@@ -35,7 +35,7 @@ LeConstraint("wood and wool below 50", lumberMill + wool, 50) -->
 **Location:** ```constraints.py - class GeConstraint```
 
 **Example Code:**
-```
+```py
 from mat_dp_core import Resources, Processes, GeConstraint
 
 r = Resources()
@@ -78,7 +78,7 @@ print(constraint)
 **Location:** ```constraints.py - class LeConstraint```
 
 **Example Code:**
-```
+```py
 from mat_dp_core import Resources, Processes, LeConstraint
 
 r = Resources()
@@ -122,7 +122,7 @@ print(constraint)
 **Location:** ```constraints.py - class EqConstraint```
 
 **Example Code:**
-```
+```py
 from mat_dp_core import Resources, Processes, EqConstraint
 
 r = Resources()
