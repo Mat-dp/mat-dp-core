@@ -1,1 +1,400 @@
 # *mat_dp_core.***measure**
+
+Measure is the workhorse of MAT-DP core; resources, constraints, processes, and an objective function have set a stage and provided inputs, and Measure will solve the system according to these.
+
+## **Objective Example Continued**
+
+The most basic usage of measure should not be too difficult, see the complete code for the '3 power plants' example below:
+
+```py
+from mat_dp_core import Resources, Processes, GeConstraint, LeConstraint, Measure
+
+r = Resources()
+electricity = r.create("electricity", "kwh")
+carbon_dioxide = r.create("CO2", "tonnes")
+
+p = Processes()
+coal_plant = p.create("Coal Power Plant", (carbon_dioxide, 1), (electricity, 100))
+gas_plant = p.create("Gas Power Plant", (carbon_dioxide, 0.6), (electricity, 100))
+organic_plant = p.create("Organic Mass Power Plant", (carbon_dioxide, 0.8), (electricity, 100))
+environment = p.create("The Atmosphere", (carbon_dioxide, -1))
+grid = p.create("The Energy Grid", (electricity, -100))
+
+coal_capacity = LeConstraint("Coal Plant Capacity 2,000kwh", coal_plant, 20)
+gas_capacity = LeConstraint("Gas Plant Capacity 1,500kwh", gas_plant, 15)
+organic_capacity = LeConstraint("Organic Plant Capacity 1,000kwh", organic_plant, 10)
+grid_needs = GeConstraint("Grid Requirement of 2,200kwh", grid, 22)
+
+objective = environment
+
+# constraints must be passed to measure in a list, so we put them in a list here.
+constraints = [coal_capacity, gas_capacity, organic_capacity, grid_needs]
+
+# To solve this system, only 4 parameters need to be passed:
+measure = Measure(resources=r, processes=p, constraints=constraints, objective=objective)
+
+
+# For display purposes:
+print("\n\n\nTonnes of CO2 produced by process:\n")
+for process in measure.resource(resource=carbon_dioxide):
+    print(str(process[0].name).ljust(30) + ":  " + str(round(process[1], 1)))
+
+print("\n\n")
+
+print("kwh of electricity produced by process:\n")
+for process in measure.resource(resource=electricity):
+    print(str(process[0].name).ljust(30) + ":  " + str(round(process[1], 1)))
+
+"""
+
+
+>>> Tonnes of CO2 produced by process:
+
+>>> Coal Power Plant              :  0.0
+>>> Gas Power Plant               :  9.0
+>>> Organic Mass Power Plant      :  5.6
+>>> The Atmosphere                :  -14.6
+>>> The Energy Grid               :  0.0
+
+
+
+>>> kwh of electricity produced by process:
+
+>>> Coal Power Plant              :  0.0
+>>> Gas Power Plant               :  1500.0
+>>> Organic Mass Power Plant      :  700.0
+>>> The Atmosphere                :  0.0
+>>> The Energy Grid               :  -2200.0
+"""
+```
+
+## **Measure()**
+
+The ```Measure``` class is responsible for solving a system.  
+Just one ```Measure``` object is made to handle this.  
+
+---
+
+**Summary:**  
+*Creates an instance of the ```Measure``` class, which will immediately attempt to solve the MAT-DP system.*
+
+**Parameters:**
+
+* `resources` Resources  
+  *Resources object*
+
+* `processes` Processes  
+  *Processes object*
+
+* `constraints` \[constraints\]  
+  *A list of all constraints involved in the system.*
+
+* `objective` the objective function  
+  *The objective function being applied to this system.*
+
+* `maxiter` int - OPTIONAL, default `None`  
+  *Allows assignment of the maximum number of iterations for the solver to run*
+
+* `allow_inconsistent_order_of_mag` bool - OPTIONAL, default `False`  
+  *Permits inconsistent orders of magnitude (advanced).*
+
+**Return Type:**  ```Measure```
+
+**Location:** `measure.py - class Measure`
+
+**Example Code:**
+
+```py
+measure = Measure(resources=r, processes=p, constraints=constraints, objective=objective)
+```
+
+---
+
+## **Methods**
+
+### `.run()`
+
+**Summary:**  
+*Returns the number of runs for a particular process or all the processes. Optionally returns these with consideration for bounds.*
+
+**Overload 1**  
+**Parameters:**
+
+* ```bounds``` bool  
+  *Specifies whether bounds should be considered.*
+
+**Return Type:**  ```[[_processes, run_vector, run_vector_lb, run_vector_ub], [...]]``` or ```[[_processes, run_vector]]```
+
+---
+
+**Overload 2**  
+**Parameters:**
+
+* ```process``` process variable  
+  *Specifies which specific process' run count should be returned.*
+
+* ```bounds``` bool  
+  *Specifies whether bounds should be considered.*
+
+**Return Type:**  ```[runs, runs_lb, runs_ub]``` or ```[runs]```
+
+
+**Location:** `measure.py - class Measure`
+
+**Example Code:**
+```py
+measure = Measure(r, p, [constraints], objective)
+# Overload 1
+print(measure.run(process=my_process, bounds=False))
+# Overload 2
+print(measure.run(bounds=False))
+
+# Below displayed values are from the three power plants example
+"""
+>>> [(<Process: Coal Power Plant>, 1.9815267861864423e-10), [...]]]
+>>> 22.0078009099
+"""
+```
+
+---
+
+### `.resource()`
+
+**Summary:**  
+*Text*
+
+**Overload 1**  
+**Parameters:**
+
+* ```bounds``` bool  
+  *Description*
+
+**Return Type:**  ```type```
+
+---
+
+**Overload 2**  
+**Parameters:**
+
+* ```process```  
+  *Description*
+
+* ```bounds```  
+  *Description*
+
+**Return Type:**  ```type```
+
+---
+
+**Overload 3**  
+**Parameters:**
+
+* ```resource```  
+  *Description*
+
+* ```bounds```  
+  *Description*
+
+**Return Type:**  ```type```
+
+---
+
+**Overload 4**  
+**Parameters:**
+
+* ```process``` process variable  
+  *Description*
+
+* ```resource``` resource variable  
+  *Description*
+
+* ```bounds``` bool - OPTIONAL, default False  
+  *Description*
+
+
+**Return Type:**  ```type```
+
+**Location:** `measure.py - class Measure`
+
+**Example Code:**
+```
+# Comment code
+```
+
+---
+
+### `.flow()`
+
+**Overload N**  
+**Summary:**  
+*Text*
+
+**Parameters:**
+
+* ```var```  
+  *Description*
+
+**Return Type:**  ```type```
+
+---
+
+**Overload N**  
+**Summary:**  
+*Text*
+
+**Parameters:**
+
+* ```var```  
+  *Description*
+
+**Return Type:**  ```type```
+
+---
+
+**Overload N**  
+**Summary:**  
+*Text*
+
+**Parameters:**
+
+* ```var```  
+  *Description*
+
+**Return Type:**  ```type```
+
+---
+
+**Overload N**  
+**Summary:**  
+*Text*
+
+**Parameters:**
+
+* ```var```  
+  *Description*
+
+**Return Type:**  ```type```
+
+---
+
+**Overload N**  
+**Summary:**  
+*Text*
+
+**Parameters:**
+
+* ```var```  
+  *Description*
+
+**Return Type:**  ```type```
+
+---
+
+**Overload N**  
+**Summary:**  
+*Text*
+
+**Parameters:**
+
+* ```var```  
+  *Description*
+
+**Return Type:**  ```type```
+
+---
+
+**Overload N**  
+**Summary:**  
+*Text*
+
+**Parameters:**
+
+* ```var```  
+  *Description*
+
+**Return Type:**  ```type```
+
+---
+
+**Overload N**  
+**Summary:**  
+*Text*
+
+**Parameters:**
+
+* ```var```  
+  *Description*
+
+**Return Type:**  ```type```
+
+**Location:** `measure.py - class Measure`
+
+**Example Code:**
+```
+# Comment code
+```
+
+---
+
+### `.cumulative_resource()`
+
+**Overload N**  
+**Summary:**  
+*Text*
+
+**Parameters:**
+
+* ```var```  
+  *Description*
+
+**Return Type:**  ```type```
+
+---
+
+**Overload N**  
+**Summary:**  
+*Text*
+
+**Parameters:**
+
+* ```var```  
+  *Description*
+
+**Return Type:**  ```type```
+
+---
+
+**Overload N**  
+**Summary:**  
+*Text*
+
+**Parameters:**
+
+* ```var```  
+  *Description*
+
+**Return Type:**  ```type```
+
+---
+
+**Overload N**  
+**Summary:**  
+*Text*
+
+**Parameters:**
+
+* ```var```  
+  *Description*
+
+**Return Type:**  ```type```
+
+**Location:** `measure.py - class Measure`
+
+**Example Code:**
+```
+# Comment code
+```
+
+---
+
+

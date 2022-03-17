@@ -172,7 +172,7 @@ print(numberOfResources)
 
 **Parameters:**
 
-* ```var```
+* ```var```  
   *Description*
 
 **Return Type:**  ```type```

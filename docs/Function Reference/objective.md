@@ -11,7 +11,7 @@ An objective function in MAT-DP Core is expressed very similarly to a [constrain
 
 An objective function will always aim to minimise its result.  
 
-Below is an example of a minimising objective function:
+Below is an example of a minimisation objective function:
 
 ```py
 objective = 5 * coal_power_plant + gas_power_plant + 4 * oil_power_plant
@@ -20,7 +20,7 @@ objective = 5 * coal_power_plant + gas_power_plant + 4 * oil_power_plant
 Lets take one section of the function: `5 * coal_power_plant`  
 The process variable `coal_power_plant` by itself contributes +1 to the value of the objective function each time it 'runs'.  
 `5 * ` is a multiplier to the runs of process variable `coal_power_plant` - this is typically called a 'weighting'.  
-As a consequence of the `5 * ` weighting, during Measurement the solution will favour **reducing** runs of the `coal_power_plant` five times more than runs of the `gas_power_plant`.
+As a consequence of the `5 * ` weighting, during [Measurement](measure.md) the solution will favour **reducing** runs of the `coal_power_plant` five times more than runs of the `gas_power_plant`.
 
 ---
 
@@ -71,10 +71,15 @@ gas_capacity = LeConstraint("Gas Plant Capacity 1,500kwh", gas_plant, 15)
 organic_capacity = LeConstraint("Organic Plant Capacity 1,000kwh", organic_plant, 10)
 grid_needs = GeConstraint("Grid Requirement of 2,200kwh", grid, 22)
 
-constraints = [coal_capacity, gas_capacity, organic_capacity, grid_needs]
-
 # Objective function:
 # objective = 1 * coal_plant + 0.8 * organic_plant + 0.6 * gas_plant
 # Is equivalent to:
 objective = environment
 ```
+
+It may seem odd that `environment`'s runs alone are equivalent to the weighted runs of each power plant.  Keep in mind that the system will always aim to reach net nil resources; if the power plants are the only producers of CO2, then the only consumer (`environment`) encapsulates all of their production in its runs.  
+More complicated examples can be found in the cookbook.
+
+---
+
+Please read on to the [measure](measure.md) section to see this problem completed.
