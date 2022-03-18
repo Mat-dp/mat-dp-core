@@ -117,7 +117,7 @@ measure = Measure(resources=r, processes=p, constraints=constraints, objective=o
 **Summary:**  
 *Returns the number of runs for a particular process or all the processes. Optionally returns these with consideration for bounds.*
 
-**Option 1**  
+#### **Option 1**  
 **Parameters:**
 
 * ```bounds``` bool  
@@ -127,7 +127,7 @@ measure = Measure(resources=r, processes=p, constraints=constraints, objective=o
 
 ---
 
-**Option 2**  
+#### **Option 2**  
 **Parameters:**
 
 * ```process``` process variable  
@@ -161,32 +161,40 @@ print(measure.run(bounds=False))
 ### `.resource()`
 
 **Summary:**  
-*Text*
+*Used to return information regarding resources in relation to the entire system or specific processes. Available with various options.*
 
-**Option 1**  
+#### **Option 1**  
+
+**Description:**  
+*Returns measurements for all processes and resources.*
+
 **Parameters:**
 
 * ```bounds``` bool  
-  *Description*
+  *Whether or not to calculate bounds.*
 
-**Return Type:**  ```type```
+**Return Type:**  ```[[resource][process], [...]]``` or ```[[[resource][process], [...]], [[resourceUpper][process], [...]], [[resourceLower][process], [...]]]```
 
 ---
 
-**Option 2**  
+#### **Option 2**  
+
+**Description:**  
+*Returns input and output resource values for the process specified.*
+
 **Parameters:**
 
-* ```process```  
-  *Description*
+* ```process``` process variable  
+  *A process to be measured.*
 
-* ```bounds```  
-  *Description*
+* ```bounds``` bool  
+  *Whether or not to calculate bounds.*
 
 **Return Type:**  ```type```
 
 ---
 
-**Option 3**  
+#### **Option 3**  
 **Parameters:**
 
 * ```resource```  
@@ -199,7 +207,7 @@ print(measure.run(bounds=False))
 
 ---
 
-**Option 4**  
+#### **Option 4**  
 **Parameters:**
 
 * ```process``` process variable  
@@ -225,122 +233,137 @@ print(measure.run(bounds=False))
 
 ### `.flow()`
 
-**Option N**  
+#### **Option 1**  
 **Summary:**  
-*Text*
+*Returns all flows between each process pair and each resource.*
 
 **Parameters:**
 
-* ```var```  
-  *Description*
+* ```bounds``` bool - OPTIONAL, default False  
+  *Whether or not to calculate bounds.*
 
-**Return Type:**  ```type```
+**Return Type:**  ```list```
 
 ---
 
-**Option N**  
+#### **Option 2**  
 **Summary:**  
-*Text*
+*Returns all flows between the process pair specified.*
 
 **Parameters:**
 
-* ```var```  
-  *Description*
+* ```process_from``` process variable  
+  *The process that the resource is flowing from.*
 
-**Return Type:**  ```type```
+* ```process_to``` process variable  
+  *The process that the resource is flowing into.*
+
+* ```bounds``` bool - OPTIONAL, default False  
+  *Whether or not to calculate bounds.*
+
+**Return Type:**  ```list```
 
 ---
 
-**Option N**  
+#### **Option 3**  
 **Summary:**  
-*Text*
+*Returns all flows for the resource specified.*
 
 **Parameters:**
 
-* ```var```  
-  *Description*
+* ```resource``` resource variable  
+  *The resource to measure flows for.*
 
-**Return Type:**  ```type```
+* ```bounds``` bool - OPTIONAL, default False  
+  *Whether or not to calculate bounds.*
+
+**Return Type:**  ```list```
 
 ---
 
-**Option N**  
+#### **Option 4**  
 **Summary:**  
-*Text*
+*Returns the sum of all outflows from this process for each resource.*
 
 **Parameters:**
 
-* ```var```  
-  *Description*
+* ```process``` process variable  
+  *The process that the resources are flowing from.*
 
-**Return Type:**  ```type```
+* ```bounds``` bool - OPTIONAL, default False  
+  *Whether or not to calculate bounds.*
+
+**Return Type:**  ```list```
 
 ---
 
-**Option N**  
+#### **Option 5**  
 **Summary:**  
-*Text*
+*Returns the sum of all outflows from this process for this resource.*
 
 **Parameters:**
 
-* ```var```  
-  *Description*
+* ```process_from``` process variable  
+  *The process material is flowing from.*
 
-**Return Type:**  ```type```
+* ```resource``` resource variable  
+  *The resource that is flowing.*
+
+* ```bounds``` bool - OPTIONAL, default False  
+  *Whether or not to calculate bounds.*
+
+
+**Return Type:**  ```list```
 
 ---
 
-**Option N**  
+#### **Option 6**  
 **Summary:**  
-*Text*
+*Returns the sum of all inflows into this process for each resource*
 
 **Parameters:**
 
-* ```var```  
-  *Description*
+* ```process_to``` process variable  
+  *The process that the resource is flowing into.*
 
-**Return Type:**  ```type```
+* ```resource``` resource variable  
+  *The resource to measure.*
+
+* ```bounds``` bool - OPTIONAL, default False  
+  *Whether or not to calculate bounds.*
+
+
+**Return Type:**  ```list```
 
 ---
 
-**Option N**  
+#### **Option 7**  
 **Summary:**  
-*Text*
+*Returns the sum of all inflows into this process for this resource.*
 
 **Parameters:**
 
-* ```var```  
-  *Description*
+* ```process_from``` process variable  
+  *The process that the resource is flowing from.*
 
-**Return Type:**  ```type```
+* ```process_to``` process variable  
+  *The process that the resource is flowing into.*
 
----
+* ```resource``` resource variable  
+  *The resource to measure.*
 
-**Option N**  
-**Summary:**  
-*Text*
+* ```bounds``` bool  
+  *Whether or not to calculate bounds.*
 
-**Parameters:**
-
-* ```var```  
-  *Description*
-
-**Return Type:**  ```type```
-
-**Location:** `measure.py - class Measure`
-
-**Example Code:**
-```
-# Comment code
-```
+**Return Type:**  ```list```
 
 ---
 
 ### `.cumulative_resource()`
 
-**Option N**  
+#### **Option 1**  
 **Summary:**  
-*Text*
+*Returns the amount of each resource used for the entire chain of processes that led to each process.*
 
 **Parameters:**
 
@@ -351,9 +374,9 @@ print(measure.run(bounds=False))
 
 ---
 
-**Option N**  
+#### **Option 2**  
 **Summary:**  
-*Text*
+*Returns the amount of each resource used for the entire chain of processes that led to this process.*
 
 **Parameters:**
 
@@ -364,9 +387,9 @@ print(measure.run(bounds=False))
 
 ---
 
-**Option N**  
+#### **Option 3**  
 **Summary:**  
-*Text*
+*Returns the amount of resource used for the entire chain of processes that led to each process.*
 
 **Parameters:**
 
@@ -377,9 +400,9 @@ print(measure.run(bounds=False))
 
 ---
 
-**Option N**  
+#### **Option 4**  
 **Summary:**  
-*Text*
+*Returns the amount of resource used for the entire chain of processes that led to this process.*
 
 **Parameters:**
 
