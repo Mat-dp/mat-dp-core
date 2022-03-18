@@ -117,6 +117,8 @@ measure = Measure(resources=r, processes=p, constraints=constraints, objective=o
 **Summary:**  
 *Returns the number of runs for a particular process or all the processes in the system. Optionally returns these with consideration for bounds.*
 
+**Location:** `measure.py - class Measure`
+
 ---
 
 #### **Option 1**  
@@ -163,6 +165,8 @@ print(measure.run(bounds=False))
 
 **Summary:**  
 *Used to return information regarding resources in relation to the entire system or specific processes. Available with various options.*
+
+**Location:** `measure.py - class Measure`
 
 ---
 
@@ -235,6 +239,8 @@ print(measure.run(bounds=False))
 
 **Summary:**  
 *Used to return information regarding __flow__ of resources in relation to the entire system or to / from specific processes. Available with various options.*
+
+**Location:** `measure.py - class Measure`
 
 ---
 #### **Option 1**  
@@ -372,7 +378,9 @@ print(measure.run(bounds=False))
 ### `.cumulative_resource()`
 
 **Summary:**  
-*. Available with various options.*
+*Calculates resources leading up to all processes, or a given process. For example, all the steel contributing the manufacture of a boat. Available with various options.*
+
+**Location:** `measure.py - class Measure`
 
 ---
 
