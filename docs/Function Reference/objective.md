@@ -50,7 +50,11 @@ The optimisation objective of:
 
 * Minimise the amount of CO2 produced by the system.
 
-Let's break the above problem into code:
+Here is a diagram to help illustrate the situation:
+
+![](../res/threefactories.png)
+
+Let's break this problem into code:
 
 ```py
 from mat_dp_core import Resources, Processes, GeConstraint, LeConstraint, Measure

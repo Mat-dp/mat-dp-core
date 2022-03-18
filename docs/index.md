@@ -1,14 +1,16 @@
-# Start Here
-## *MATerial Demand Projections Model*
+# MATerial Demand Projections Core
 
-### Project Context
-Welcome to the MAT-DP Core. This repository sits at the 'core' of a wider project to deliver user-friendly and open-access software solutions to environment and energy researchers.  
+Welcome to the MAT-DP Core. This repository sits at the centre of a wider project to deliver user-friendly and open-access software solutions to environment and energy research.  
 While this software *could* be used for many applications, MAT-DP Core and its documentation has been designed with the research of *'environmental impact and material usage in the building of low-carbon systems'* in mind.
 
-### What is MAT-DP Core?
+## What is MAT-DP Core?
 
+MAT-DP Core is a linear programming library tailored to the needs of research around material demand for low-carbon systems.  
+MAT-DP Core helps technically proficient users to explore scenarios and systems relating to their research in Python.
 
-## Install and Test Run
+## Getting Started
+
+### Install and Test Run
 
 Please install poetry, a dependency manager for Python. You can find poetry at [this GitHub page.](https://github.com/python-poetry/poetry)
 
@@ -24,9 +26,9 @@ Then run the pizza box example
 
 `poetry run python3 test.py`
 
-## Concepts
+### Concepts
 
-### Definitions
+#### Definitions
 
 The following terms will be used frequently:
 
@@ -46,9 +48,9 @@ Objective - The objective function is the property of the system which will be m
 
 Measurement - a measurement taken of the solved system, determining the 
 
-## Usage Overview
+### Usage Overview
 
-### Example problem
+#### Example problem
 
 Below describes a practical example of using MAT-dp. Imagine...
 
@@ -60,7 +62,7 @@ Below describes a practical example of using MAT-dp. Imagine...
 * We wish to only generate the minimum amount of cardboard and pizza boxes. *(objective)*
 * How many pizza boxes must we burn to survive? *(measurement)*
 
-### Step 1: Define resources
+#### Step 1: Define resources
 
 Firstly we must define all the resources we wish to use, with their name and units.
 
@@ -74,7 +76,7 @@ pizza_box = resources.create("pizza_box")
 energy = resources.create("energy", unit="kWh")
 ```
 
-### Step 2: Define processes
+#### Step 2: Define processes
 
 We must now take these resources and use them to define our processes. These are defined by a name and the resources that they produce and consume.
 
@@ -103,7 +105,7 @@ energy_grid = processes.create("energy grid", (energy, -2))
 
 
 
-### Step 3: Define constraints
+#### Step 3: Define constraints
 
 Now we need to define the constraints of the problem. We want to specify we take equal amounts of pizza boxes from each producer *(Run ratio constraint)*, and that we only require 8 kWh of energy *(Resource constraint)*:
 
@@ -119,7 +121,7 @@ constraints = [
 ]
 ```
 
-### Step 4: Define an objective function
+#### Step 4: Define an objective function
 
 Once we've established all of our constraints, we must define an objective function. The below example specifies we minimise the total number of runs:
 
@@ -135,7 +137,7 @@ objective = (
 )
 ```
 
-### Step 5: Make a measurement
+#### Step 5: Make a measurement
 
 We must now measure the number of pizza boxes to burn.
 
