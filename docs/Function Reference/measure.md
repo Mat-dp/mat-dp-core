@@ -180,7 +180,7 @@ print(measure.run(bounds=False))
 * ```bounds``` bool  
   *Whether or not to calculate bounds.*
 
-**Return Type:**  ```[[resource][process], [...]]``` or ```[[[resource][process], [...]], [[resourceUpper][process], [...]], [[resourceLower][process], [...]]]```
+**Return Type:**  ```list```
 
 ---
 
@@ -197,7 +197,7 @@ print(measure.run(bounds=False))
 * ```bounds``` bool  
   *Whether or not to calculate bounds.*
 
-**Return Type:**  ```type```
+**Return Type:**  ```list```
 
 ---
 
@@ -205,12 +205,12 @@ print(measure.run(bounds=False))
 **Parameters:**
 
 * ```resource```  
-  *Description*
+  *The resource to be measured.*
 
 * ```bounds```  
-  *Description*
+  *Whether or not to calculate bounds.*
 
-**Return Type:**  ```type```
+**Return Type:**  ```list```
 
 ---
 
@@ -218,15 +218,15 @@ print(measure.run(bounds=False))
 **Parameters:**
 
 * ```process``` process variable  
-  *Description*
+  *The process to be measured.*
 
 * ```resource``` resource variable  
-  *Description*
+  *The resource to be measured.*
 
 * ```bounds``` bool - OPTIONAL, default False  
-  *Description*
+  *Whether or not to calculate bounds.*
 
-**Return Type:**  ```type```
+**Return Type:**  ```list```
 
 ---
 
