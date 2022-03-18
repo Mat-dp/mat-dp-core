@@ -117,7 +117,7 @@ measure = Measure(resources=r, processes=p, constraints=constraints, objective=o
 **Summary:**  
 *Returns the number of runs for a particular process or all the processes. Optionally returns these with consideration for bounds.*
 
-**Overload 1**  
+**Option 1**  
 **Parameters:**
 
 * ```bounds``` bool  
@@ -127,7 +127,7 @@ measure = Measure(resources=r, processes=p, constraints=constraints, objective=o
 
 ---
 
-**Overload 2**  
+**Option 2**  
 **Parameters:**
 
 * ```process``` process variable  
@@ -144,9 +144,9 @@ measure = Measure(resources=r, processes=p, constraints=constraints, objective=o
 **Example Code:**
 ```py
 measure = Measure(r, p, [constraints], objective)
-# Overload 1
+# Option 1
 print(measure.run(process=my_process, bounds=False))
-# Overload 2
+# Option 2
 print(measure.run(bounds=False))
 
 # Below displayed values are from the three power plants example
@@ -163,7 +163,7 @@ print(measure.run(bounds=False))
 **Summary:**  
 *Text*
 
-**Overload 1**  
+**Option 1**  
 **Parameters:**
 
 * ```bounds``` bool  
@@ -173,7 +173,7 @@ print(measure.run(bounds=False))
 
 ---
 
-**Overload 2**  
+**Option 2**  
 **Parameters:**
 
 * ```process```  
@@ -186,7 +186,7 @@ print(measure.run(bounds=False))
 
 ---
 
-**Overload 3**  
+**Option 3**  
 **Parameters:**
 
 * ```resource```  
@@ -199,7 +199,7 @@ print(measure.run(bounds=False))
 
 ---
 
-**Overload 4**  
+**Option 4**  
 **Parameters:**
 
 * ```process``` process variable  
@@ -225,7 +225,7 @@ print(measure.run(bounds=False))
 
 ### `.flow()`
 
-**Overload N**  
+**Option N**  
 **Summary:**  
 *Text*
 
@@ -238,7 +238,7 @@ print(measure.run(bounds=False))
 
 ---
 
-**Overload N**  
+**Option N**  
 **Summary:**  
 *Text*
 
@@ -251,7 +251,7 @@ print(measure.run(bounds=False))
 
 ---
 
-**Overload N**  
+**Option N**  
 **Summary:**  
 *Text*
 
@@ -264,7 +264,7 @@ print(measure.run(bounds=False))
 
 ---
 
-**Overload N**  
+**Option N**  
 **Summary:**  
 *Text*
 
@@ -277,7 +277,7 @@ print(measure.run(bounds=False))
 
 ---
 
-**Overload N**  
+**Option N**  
 **Summary:**  
 *Text*
 
@@ -290,7 +290,7 @@ print(measure.run(bounds=False))
 
 ---
 
-**Overload N**  
+**Option N**  
 **Summary:**  
 *Text*
 
@@ -303,7 +303,7 @@ print(measure.run(bounds=False))
 
 ---
 
-**Overload N**  
+**Option N**  
 **Summary:**  
 *Text*
 
@@ -316,7 +316,7 @@ print(measure.run(bounds=False))
 
 ---
 
-**Overload N**  
+**Option N**  
 **Summary:**  
 *Text*
 
@@ -338,7 +338,7 @@ print(measure.run(bounds=False))
 
 ### `.cumulative_resource()`
 
-**Overload N**  
+**Option N**  
 **Summary:**  
 *Text*
 
@@ -351,7 +351,7 @@ print(measure.run(bounds=False))
 
 ---
 
-**Overload N**  
+**Option N**  
 **Summary:**  
 *Text*
 
@@ -364,7 +364,7 @@ print(measure.run(bounds=False))
 
 ---
 
-**Overload N**  
+**Option N**  
 **Summary:**  
 *Text*
 
@@ -377,7 +377,7 @@ print(measure.run(bounds=False))
 
 ---
 
-**Overload N**  
+**Option N**  
 **Summary:**  
 *Text*
 
