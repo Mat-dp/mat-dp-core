@@ -40,7 +40,7 @@ p = Processes() # variable 'p' is now an instance a 'Processes' object
 
 ## **Methods**
 
-### .create()
+### `.create()`
 
 **Summary:**  
 *Creates a process, i.e. a resource producer and/or consumer for a system.*
@@ -105,7 +105,7 @@ for process in p:
 
 ---
 
-### .load()
+### `.load()`
 
 **Summary:**  
 *Loads and creates processes from using a conventional List of Tuples in the format:  
@@ -152,7 +152,7 @@ for process in p:
 
 ---
 
-### .dump()
+### `.dump()`
 
 **Summary:**  
 *Returns a tuple list representation of all processes existing in this ```Processes``` object's context.*

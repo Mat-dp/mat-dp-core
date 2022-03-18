@@ -14,7 +14,7 @@ LeConstraint("wood and wool below 50", lumberMill + wool, 50) -->
 
 **Example Code:**
 
-### **GeConstraint()** 
+### `GeConstraint()` 
 
 **Summary:**  
 *The Ge ('greater than or equal to') Constraint class can be used to assert a given process runs __at least__ ```n``` times.*
@@ -57,7 +57,7 @@ print(constraint)
 ---
 
 
-### **LeConstraint()** 
+### `LeConstraint()` 
 
 **Summary:**  
 *The Le ('less than or equal to') Constraint class can be used to assert a given process runs __at most__ ```n``` times.*
@@ -101,7 +101,7 @@ print(constraint)
 
 
 
-### **EqConstraint()**
+### `EqConstraint()`
 
 **Summary:**  
 *The Eq ('equal to') Constraint class can be used to assert a given process runs __exactly__ ```n``` times.*

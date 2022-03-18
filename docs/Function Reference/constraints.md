@@ -21,7 +21,7 @@ Constraints make more sense in the context of the [Objective](objective.md); try
 
 There are three core Constraints, intended to be helpful in MAT-DP research contexts, these are: ```RunEqConstraint```, ```RunRatioConstraint```, and ```ResourceConstraint```.
 
-### **RunEqConstraint()**
+### `RunEqConstraint()`
 
 **Summary:**  
 *Run Equal (to) Constraint states that a given process must run exactly `n` times.*
@@ -63,7 +63,7 @@ print(constraint)
 
 ---
 
-### **RunRatioConstraint()**
+### `RunRatioConstraint()`
 
 **Summary:**  
 *The Run Ratio Constraint class serves to fix the number of runs of a process in relation to another.  
@@ -110,7 +110,7 @@ print(constraint)
 
 ---
 
-### **ResourceConstraint()**
+### `ResourceConstraint()`
 
 **Summary:**  
 *Sets the number runs of a process in relation to its production or consumption of a resource.  
