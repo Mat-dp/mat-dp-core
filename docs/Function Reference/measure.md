@@ -115,7 +115,9 @@ measure = Measure(resources=r, processes=p, constraints=constraints, objective=o
 ### `.run()`
 
 **Summary:**  
-*Returns the number of runs for a particular process or all the processes. Optionally returns these with consideration for bounds.*
+*Returns the number of runs for a particular process or all the processes in the system. Optionally returns these with consideration for bounds.*
+
+---
 
 #### **Option 1**  
 **Parameters:**
@@ -138,10 +140,9 @@ measure = Measure(resources=r, processes=p, constraints=constraints, objective=o
 
 **Return Type:**  ```[runs, runs_lb, runs_ub]``` or ```[runs]```
 
+---
 
-**Location:** `measure.py - class Measure`
-
-**Example Code:**
+#### **Example Code**
 ```py
 measure = Measure(r, p, [constraints], objective)
 # Option 1
@@ -162,6 +163,8 @@ print(measure.run(bounds=False))
 
 **Summary:**  
 *Used to return information regarding resources in relation to the entire system or specific processes. Available with various options.*
+
+---
 
 #### **Option 1**  
 
@@ -219,20 +222,21 @@ print(measure.run(bounds=False))
 * ```bounds``` bool - OPTIONAL, default False  
   *Description*
 
-
 **Return Type:**  ```type```
 
-**Location:** `measure.py - class Measure`
+---
 
-**Example Code:**
+#### **Example Code**
 ```
 # Comment code
 ```
 
----
-
 ### `.flow()`
 
+**Summary:**  
+*Used to return information regarding __flow__ of resources in relation to the entire system or to / from specific processes. Available with various options.*
+
+---
 #### **Option 1**  
 **Summary:**  
 *Returns all flows between each process pair and each resource.*
@@ -359,7 +363,18 @@ print(measure.run(bounds=False))
 
 ---
 
+#### **Example Code**
+```
+# Comment code
+```
+
+
 ### `.cumulative_resource()`
+
+**Summary:**  
+*. Available with various options.*
+
+---
 
 #### **Option 1**  
 **Summary:**  
@@ -367,23 +382,26 @@ print(measure.run(bounds=False))
 
 **Parameters:**
 
-* ```var```  
-  *Description*
+* ```bounds``` bool - OPTIONAL, default False  
+  *Whether or not to calculate bounds.*
 
-**Return Type:**  ```type```
+**Return Type:**  ```list```
 
 ---
 
 #### **Option 2**  
 **Summary:**  
-*Returns the amount of each resource used for the entire chain of processes that led to this process.*
+*Returns the amount of each resource used for the entire chain of processes that led to __this__ process.*
 
 **Parameters:**
 
-* ```var```  
-  *Description*
+* ```process``` process variable  
+  *The process that the resource is flowing into.*
 
-**Return Type:**  ```type```
+* ```bounds``` bool - OPTIONAL, default False  
+  *Whether or not to calculate bounds.*
+
+**Return Type:**  ```list```
 
 ---
 
@@ -393,10 +411,13 @@ print(measure.run(bounds=False))
 
 **Parameters:**
 
-* ```var```  
-  *Description*
+* ```resource``` resource variable  
+  *The resource to be measured.*
 
-**Return Type:**  ```type```
+* ```bounds``` bool - OPTIONAL, default False  
+  *Whether or not to calculate bounds.*
+
+**Return Type:**  ```list```
 
 ---
 
@@ -406,18 +427,23 @@ print(measure.run(bounds=False))
 
 **Parameters:**
 
-* ```var```  
-  *Description*
+* ```process``` process variable  
+  *The process that the resource is flowing into.*
 
-**Return Type:**  ```type```
+* ```resource``` resource variable  
+  *The resource to be measured.*
 
-**Location:** `measure.py - class Measure`
+* ```bounds``` bool - OPTIONAL, default False  
+  *Whether or not to calculate bounds.*
 
-**Example Code:**
+**Return Type:**  ```list```
+
+---
+
+#### **Example Code**
 ```
 # Comment code
 ```
 
----
 
 
