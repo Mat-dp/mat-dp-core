@@ -530,7 +530,7 @@ print(measure.flow(process_from=iron_mine, process_to=environment, resource=carb
 # .cumulative_resource()
 
 # This example of cumulative_resource() is not yet operational
-# See issue NUMBER_HERE for details.
+# See issue #16 on (https://github.com/dreamingspires/mat-dp-core) for details.
 """
 print("---\n\n1) All cumulative resource flows from everything to everything:")
 print(measure.cumulative_resource()) # Option 1
