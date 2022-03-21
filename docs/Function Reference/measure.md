@@ -443,12 +443,11 @@ measure = Measure(resources=r, processes=p, constraints=constraints, objective=o
 
 **Overview**
 
-The below worked example shows the (simplified) CO2 side effects leading to steel rail and railway wagon manufacture (assuming 500metres and 5 wagons produced).
+The below worked example shows the (simplified) CO2 side effects leading to steel rail and railway wagon manufacture (assuming 500 metres and 5 wagons produced).
 
-See the below diagram for an overview:
+See the below diagram for an overview of the system:
 
-
-
+![](../res/railwagon.png)
 
 ```py
 
