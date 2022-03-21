@@ -1,3 +1,2 @@
-# **Complex**
+# **Complex Example**
 
-1:1:1 bound (farming) arable, dairy, KindBurgerCo'

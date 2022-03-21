@@ -13,9 +13,7 @@ nav:
     - 'Exceptions': 'Function Reference/exceptions.md'
   - 'MAT-DP Cookbook':
     - 'Simple': 'MAT-DP Core Cookbook/simple.md'
-    - 'Medium': 'MAT-DP Core Cookbook/medium.md'
     - 'Complex': 'MAT-DP Core Cookbook/complex.md'
-    - 'Real World': 'MAT-DP Core Cookbook/realworld.md'
 
 theme:
   name: 'material'
