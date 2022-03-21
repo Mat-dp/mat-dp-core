@@ -142,29 +142,13 @@ measure = Measure(resources=r, processes=p, constraints=constraints, objective=o
 
 **Return Type:**  ```[runs, runs_lb, runs_ub]``` or ```[runs]```
 
----
-
-#### **Example Code**
-```py
-measure = Measure(r, p, [constraints], objective)
-# Option 1
-print(measure.run(process=my_process, bounds=False))
-# Option 2
-print(measure.run(bounds=False))
-
-# Below displayed values are from the three power plants example
-"""
->>> [(<Process: Coal Power Plant>, 1.9815267861864423e-10), [...]]]
->>> 22.0078009099
-"""
-```
 
 ---
 
 ### `.resource()`
 
 **Summary:**  
-*Used to return information regarding resources in relation to the entire system or specific processes. Available with various options.*
+*Used to return information regarding resource input or output in relation to processes - for a full map of 'resource responsibility', see `cumulative_resource()`. Available with various options.*
 
 **Location:** `measure.py - class Measure`
 
@@ -230,15 +214,10 @@ print(measure.run(bounds=False))
 
 ---
 
-#### **Example Code**
-```
-# Comment code
-```
-
 ### `.flow()`
 
 **Summary:**  
-*Used to return information regarding __flow__ of resources in relation to the entire system or to / from specific processes. Available with various options.*
+*Used to return information regarding __flow__ of resources between directly linked processes. Available with various options.*
 
 **Location:** `measure.py - class Measure`
 
@@ -297,7 +276,7 @@ print(measure.run(bounds=False))
 
 **Parameters:**
 
-* ```process``` process variable  
+* ```process_from``` process variable  
   *The process that the resources are flowing from.*
 
 * ```bounds``` bool - OPTIONAL, default False  
@@ -329,7 +308,24 @@ print(measure.run(bounds=False))
 
 #### **Option 6**  
 **Summary:**  
-*Returns the sum of all inflows into this process for each resource*
+*Returns the sum of all inflows into this process for each resource.*
+
+**Parameters:**
+
+* ```process_to``` process variable  
+  *The process material is flowing to.*
+
+* ```bounds``` bool - OPTIONAL, default False  
+  *Whether or not to calculate bounds.*
+
+
+**Return Type:**  ```list```
+
+---
+
+#### **Option 7**  
+**Summary:**  
+*Returns the sum of all inflows into this process for this resource.*
 
 **Parameters:**
 
@@ -347,9 +343,9 @@ print(measure.run(bounds=False))
 
 ---
 
-#### **Option 7**  
+#### **Option 8**  
 **Summary:**  
-*Returns the sum of all inflows into this process for this resource.*
+*Returns the value of resource flow for the given process pair and resource.*
 
 **Parameters:**
 
@@ -368,11 +364,6 @@ print(measure.run(bounds=False))
 **Return Type:**  ```list```
 
 ---
-
-#### **Example Code**
-```
-# Comment code
-```
 
 
 ### `.cumulative_resource()`
@@ -415,7 +406,7 @@ print(measure.run(bounds=False))
 
 #### **Option 3**  
 **Summary:**  
-*Returns the amount of resource used for the entire chain of processes that led to each process.*
+*Returns the amount of a given resource used for the entire chain of processes that led to each process.*
 
 **Parameters:**
 
@@ -431,7 +422,7 @@ print(measure.run(bounds=False))
 
 #### **Option 4**  
 **Summary:**  
-*Returns the amount of resource used for the entire chain of processes that led to this process.*
+*Returns the amount of a given resource used for the entire chain of processes that led to this process.*
 
 **Parameters:**
 
@@ -448,10 +439,112 @@ print(measure.run(bounds=False))
 
 ---
 
-#### **Example Code**
-```
-# Comment code
-```
+## **Example Code**
+
+**Overview**
+
+The below worked example shows the (simplified) CO2 side effects leading to steel rail and railway wagon manufacture (assuming 500metres and 5 wagons produced).
+
+See the below diagram for an overview:
 
 
+
+
+```py
+
+from mat_dp_core import Resources, Processes, GeConstraint, LeConstraint, Measure
+
+r = Resources()
+iron_ore = r.create("Iron Ore", "metric tonnes")
+iron = r.create("Iron", "metric tonnes")
+coal = r.create("Coal", "metric tonnes")
+carbon_dioxide = r.create("CO2", "metric tonnes")
+steel = r.create("Steel", "metric tonnes")
+rail = r.create("Steel Rail", "metres")
+wagon = r.create("Railway Wagon", "units")
+
+p = Processes()
+coal_mine = p.create("Coal Mine", (carbon_dioxide, 0.2), (coal, 1.0))
+iron_mine = p.create("Iron Ore Mine", (carbon_dioxide, 0.2), (iron_ore, 1.0))
+iron_furnace = p.create("Iron Blast Furnace", (carbon_dioxide, 0.5), (iron, 1.0), (coal, -0.4), (iron_ore, -1.2))
+steel_mill = p.create("Steel Mill", (carbon_dioxide, 0.7), (iron, -0.9), (coal, -0.5), (steel, 1.0))
+rail_factory = p.create("Rail Manufacturing Factory", (carbon_dioxide, 0.1), (steel, -0.1), (rail, 1.0))
+rail_wagon_factory = p.create("Wagon Manufacturing Factory", (carbon_dioxide, 0.3), (steel, -4.0), (wagon, 1.0))
+environment = p.create("The Atmosphere", (carbon_dioxide, -1.0))
+
+rail_buy = p.create("Economy demanding rail", (rail, -1))
+wagon_buy = p.create("Economy demanding wagons", (wagon, -1))
+
+# Constraints
+rail_demand = GeConstraint("Demand for rail", rail_buy, 500)
+wagon_demand = GeConstraint("Demand for wagons", wagon_buy, 5)
+
+objective = environment
+
+constraints = [rail_demand, wagon_demand]
+
+measure = Measure(r, p, constraints, objective)
+
+# .run()
+
+print("---\nNumber of runs for every process:")
+print(measure.run(bounds=False)) # Option 1
+print("---\nNumber of runs of the coal mine only:")
+print(measure.run(process=coal_mine, bounds=False)) # Option 2
+
+# .resource()
+print("---\nNet immediate resource production for every process:")
+print(measure.resource(bounds=False)) # Option 1
+print("---\nIron Mine is directly responsible for the following Resources:")
+print(measure.resource(process=iron_mine,bounds=False)) # Option 2
+print("---\nThe following Processes are directly responsible for the following amounts of Carbon Dioxide:")
+print(measure.resource(resource=carbon_dioxide, bounds=False)) # Option 3
+print("---\nThe Rail Factory is directly responsible for this much Carbon Dioxide:")
+print(measure.resource(process=rail_factory, resource=carbon_dioxide, bounds=False)) # Option 4
+
+# .flow()
+
+print("---\n\n1) All flows from everything to everything:")
+print(measure.flow()) # Option 1
+
+print("---\n\n2) Flow of all resources from the iron mine to the iron furnace:")
+print(measure.flow(process_from=iron_mine, process_to=iron_furnace)) # Option 2
+
+print("---\n\n3) All flows of iron:")
+print(measure.flow(resource=iron)) # Option 3
+
+print("---\n\n4) The sum of all outflows from the steel mill for each resource:")
+print(measure.flow(process_from=steel_mill)) # Option 4
+
+print("---\n\n5) The sum of all outflows from the steel mill for steel:")
+print(measure.flow(process_from=steel_mill, resource=steel)) # Option 5
+
+print("---\n\n6) The sum of all inflows to the steel mill for every resource:")
+print(measure.flow(process_to=steel_mill)) # Option 6
+
+print("---\n\n7) The sum of all inflows to the wagon factory for steel:")
+print(measure.flow(process_to=rail_wagon_factory, resource=steel)) # Option 7
+
+print("---\n\n8) The sum of CO2 between the iron mine and the atmosphere:")
+print(measure.flow(process_from=iron_mine, process_to=environment, resource=carbon_dioxide)) # Option 8
+
+# .cumulative_resource()
+
+# This example of cumulative_resource() is not yet operational
+# See issue NUMBER_HERE for details.
+"""
+print("---\n\n1) All cumulative resource flows from everything to everything:")
+print(measure.cumulative_resource()) # Option 1
+
+print("---\n\n2) All cumulative resource flows from everything to the wagon factory:")
+print(measure.cumulative_resource(process=rail_wagon_factory)) # Option 2
+
+print("---\n\n3) Cumulative resource flows of iron from everything to everything::")
+print(measure.cumulative_resource(resource=iron)) # Option 3
+
+print("---\n\n4) Cumulative amount of CO2 leading up to all the production rail factory:")
+print(measure.cumulative_resource(process=rail_factory, resource=carbon_dioxide)) # Option 4
+"""
+
+```
 
