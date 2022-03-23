@@ -1,5 +1,20 @@
 site_name: Mat-DP-Core
 
+nav:
+  - 'Home': 'index.md'
+  - 'Function Reference':
+    - 'Resources': 'Function Reference/resources.md'
+    - 'Processes': 'Function Reference/processes.md'
+    - 'Constraints':
+      - 'Constraints': 'Function Reference/constraints.md'
+      - 'Advanced Constraints': 'Function Reference/advancedconstraints.md'
+    - 'Objective': 'Function Reference/objective.md'
+    - 'Measure': 'Function Reference/measure.md'
+    - 'Exceptions': 'Function Reference/exceptions.md'
+  - 'MAT-DP Cookbook':
+    - 'Simple': 'MAT-DP Core Cookbook/simple.md'
+    - 'Complex': 'MAT-DP Core Cookbook/complex.md'
+
 theme:
   name: 'material'
   palette:
