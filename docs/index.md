@@ -1,5 +1,8 @@
 # MATerial Demand Projections Core
 
+
+![](res/mat%20dp%20core%20banner.png)
+
 Welcome to the MAT-DP Core. This repository sits at the centre of a wider project to deliver user-friendly and open-access software solutions to environment and energy research.  
 While this software *could* be used for many applications, MAT-DP Core and its documentation has been designed with the research of *'environmental impact and material usage in the building of low-carbon systems'* in mind.
 

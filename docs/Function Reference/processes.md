@@ -13,7 +13,6 @@ Some simplified examples are below:
   (inputs "natural gas", outputs "electricity" and "CO2")
 
 Note: a process can have any number or combination of input and output resources.
-<!-- TODO: Check this is true -->
 
 ## **Processes()**
 
