@@ -5,7 +5,7 @@ While this software *could* be used for many applications, MAT-DP Core and its d
 
 ## **What is MAT-DP Core?**
 
-MAT-DP Core is a linear programming library tailored to the needs of research around material demand for low-carbon systems.  
+MAT-DP Core is a linear programming library - available at [this Github repository](https://github.com/dreamingspires/mat-dp-core) - tailored to the needs of research around material demand for low-carbon systems.  
 MAT-DP Core helps technically proficient users to explore scenarios and systems relating to their research in Python.
 
 ## **Getting Started**

@@ -83,3 +83,4 @@ for process in measure.resource(resource=energy):
 If ran to completion, this code should result in 3.8 HAWTs and 7.5 VAWTs being made, resulting in 67.5kw of energy being made available to the grid.  
 This is preferable to pure VAWT or pure HAWT. Such allocation would result in 60kw and 56.25kw respectively, missing out on 7.5kw (12.5% extra). MAT-DP-Core has allowed the optimal allocation of two limited resources to be found. MAT-DP-Core's Measure() functions would further provide a full trace of side-effects if those were to be included in the system (CO2, social cost, and so on).
 
+The full code for this example is available under: `mat-dp-core/examples/simple.py`
