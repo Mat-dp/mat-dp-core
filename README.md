@@ -1,7 +1,7 @@
-# MAT-dp Core
+# Mat-dp Core
 ## *MATerial Demand Projections Model*
 
-Welcome to the MAT-dp core. This repo represents the core of the MAT-dp project, which aims to deliver user-friendly and open-access software to study the environmental implications of materials used for building low-carbon systems. 
+Welcome to the Mat-dp core. This repo represents the core of the MAT-dp project, which aims to deliver user-friendly and open-access software to study the environmental implications of materials used for building low-carbon systems. 
 
 # Installation and launch
 
