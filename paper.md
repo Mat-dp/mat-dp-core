@@ -3,7 +3,7 @@ title: 'Mat-dp: An open-source Python model for analysing material demand projec
 which result from building low-carbon systems.'
 tags:
   - materials
-  - Python
+  - python
   - low carbon
   - material efficiency
   - material demand 
@@ -58,10 +58,11 @@ Thus, identifying and implementing options for reducing material emissions is re
 Mat-dp offers an easy-to-use structure to study material demands, where the types of processes and resources can
 be extended as much as the user needs. To the best of our knowledge, this is the first time that such an extensible
 open-source python model to study materials has been developed. Previous models in the literature and as open-source models have
-focused on either only a subset of systems (e.g., materials for buildings) or a comprehensive, yet prescribed, set of systems which include  
-some technologies and materials (e.g., ODYM-RECC model [@Pauliuk2020]). The reusable nature of Mat-dp makes it ideal for allowing
-users to focus on the process(es) they want to investigate, rather than setting up code or a mathematical model
-from scratch. The benefits of such reusability to advancing research in this scientific discipline cannot be understated.
+focused on either only a subset of systems (e.g., materials for buildings) or a comprehensive, yet prescribed, 
+set of systems which include some technologies and materials (e.g., ODYM-RECC model [@Pauliuk2020]). The reusable nature of 
+Mat-dp makes it ideal for allowing users to focus on the process(es) they want to investigate, rather than setting up code 
+or a mathematical model from scratch. The benefits of such reusability to advancing research in this scientific discipline 
+cannot be understated.
 
 
 Mat-dp is capable of adapting the temporal and regional specifications of users by creating the processes
