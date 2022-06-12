@@ -10,7 +10,9 @@ tags:
   - environmental implications
   - embodied emissions
 authors:
- - name: Karla Cervantes Barron
+ - name:
+      given-names: Karla
+      surname: Cervantes Barron
    orcid: 0000-0002-4081-3175
    affiliation: 1
  - name: Jonathan M Cullen
