@@ -139,3 +139,17 @@ from mat_dp_core import Measure
 measurement = Measure(resources, processes, constraints, objective)
 print(measurement.resource(pizza_box))
 ```
+
+
+# Contributing to Mat-dp
+
+
+Contributions are welcome! 
+If you see something that needs to be improved, open an issue in the [respective section of the repository](https://github.com/Mat-dp/mat-dp-core/issues).
+If you have questions, need assistance or need better instructions for contributing, please 
+[get in touch via e-mail](mailto:refficiency-enquiries@eng.cam.ac.uk) mentioning "Mat-dp" in the subject.
+
+
+For any questions on how to use the software, please refer to the [documentation](https://github.com/Mat-dp/mat-dp-core/tree/master/docs). 
+It contains useful definitions and examples of using the software. Please contact us by e-mail for any other support requried.
+
