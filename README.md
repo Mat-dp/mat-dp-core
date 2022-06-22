@@ -141,6 +141,14 @@ print(measurement.resource(pizza_box))
 ```
 
 
+# Visualising the documentation
+
+
+To view the documentation in html format, go to [this website](https://client.dreamingspires.dev/mat_dp_core/) 
+or run the documentation through mkdocs using the following command at the root of the repository:
+
+`poetry run mkdocs serve`
+
 # Contributing to Mat-dp
 
 
