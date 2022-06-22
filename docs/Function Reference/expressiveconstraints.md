@@ -1,18 +1,35 @@
 # *mat_dp_core.***constraints**
 
-There are three advanced Constraints: ```GeConstraint```, ```LeConstraint```, and ```EqConstraint```.  
-Each of these can be used to express the conditions of a system in the form of a *constraint expression*. Constraint expressions can be hard to devise, but after this should be straightforward to implement.
-
-<!-- TODO: redo according to what mark said, about being able to make expressions within constraints eg:
-LeConstraint("wood and wool below 50", lumberMill + wool, 50) -->
+There are three more expressive Constraints: ```GeConstraint```, ```LeConstraint```, and ```EqConstraint```.  
+Each of these can be used to express the conditions of a system in the form of a *constraint expression*.
 
 ### **Constraint Expressions**
 
 **Overview:**
 
-**Explanation:**
+A constraint expression permits more advanced constraints to be defined according to one or more weighted variables.
+
+If a constraint needs to be expressed in terms of another process, then constraint expressions can be particularly useful.  
+*Hint: Constraint expressions are written just the same as objective functions.*
 
 **Example Code:**
+
+```py
+from mat_dp_core import Resources, Processes, GeConstraint
+
+r = Resources()
+water = r.create(name="fresh water", unit="litres")
+
+p = Processes() 
+pump = p.create("water pump", (water, 100))
+valve = p.create("water valve", (water, 40))
+
+# Constraint created:
+constraint = GeConstraint("weighted pump and valve GeConstraint", 5 * pump + 3 * valve, 5)
+
+# Expression is:
+# 5 * pump + 3 * valve
+```
 
 ### `GeConstraint()` 
 
