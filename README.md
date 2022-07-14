@@ -7,6 +7,10 @@ Welcome to the Mat-dp core. This repo represents the core of the MAT-dp project,
 
 Please install poetry - see [here](https://github.com/python-poetry/poetry)
 
+You can find mat-dp-core in PyPi. You can use poetry to add it to your working environment, which will help install all other additional dependencies required.
+
+`poetry add mat-dp-core`
+
 To install all the project dependencies
 
 `poetry install`
