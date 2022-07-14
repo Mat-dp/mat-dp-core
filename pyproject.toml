@@ -2,7 +2,9 @@
 name = "mat-dp-core"
 version = "0.1.0"
 description = ""
+license = "MIT"
 authors = ["Edd Salkield <edd@salkield.uk>"]
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.10"
