@@ -1,6 +1,6 @@
 # *mat_dp_core.***measure**
 
-Measure is the workhorse of MAT-DP core; resources, constraints, processes, and an objective function have set a stage and provided inputs, and Measure will solve the system according to these.
+Measure is the workhorse of Mat-dp core; resources, constraints, processes, and an objective function have set a stage and provided inputs, and Measure will solve the system according to these.
 
 ## **Objective Example Continued**
 

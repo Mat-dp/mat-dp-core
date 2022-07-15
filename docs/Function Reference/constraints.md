@@ -1,7 +1,7 @@
 # *mat_dp_core.***further_constraints**
 
 Constraints specify the conditions under which a system operates.  
-MAT-DP Core exposes several types of constraint to help researchers assess systems under a variety of conditions.
+Mat-dp core exposes several types of constraint to help researchers assess systems under a variety of conditions.
 
 Some examples:  
 
@@ -19,7 +19,7 @@ Constraints make more sense in the context of the [Objective](objective.md); try
 
 ## **The Three Constraints**
 
-There are three core Constraints, intended to be helpful in MAT-DP research contexts, these are: ```RunEqConstraint```, ```RunRatioConstraint```, and ```ResourceConstraint```.
+There are three core Constraints, intended to be helpful in Mat-dp research contexts, these are: ```RunEqConstraint```, ```RunRatioConstraint```, and ```ResourceConstraint```.
 
 ### `RunEqConstraint()`
 

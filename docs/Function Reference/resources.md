@@ -1,6 +1,6 @@
 # *mat_dp_core.***Resources**
 
-For the purposes of MAT-DP, a resource can be any quantifiable direct input (consumption) or output (production) of a process. In a system being used for typical MAT-DP related research, each resource is likely to be a material.
+For the purposes of Mat-dp, a resource can be any quantifiable direct input (consumption) or output (production) of a process. In a system being used for typical Mat-dp related research, each resource is likely to be a material.
 
 For example, in some hypothetical systems:
 

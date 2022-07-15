@@ -1,7 +1,7 @@
 # *mat_dp_core.***Processes**
 
 In the abstract, a process is any describable entity or recurrence that consumes and/or produces [resources](resources.md) within a system.  
-In a system typical of MAT-DP related research, a process is likely to be associated with a factory, business, or an entire industry.
+In a system typical of Mat-dp related research, a process is likely to be associated with a factory, business, or an entire industry.
 
 Some simplified examples are below:
 

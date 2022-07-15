@@ -2,7 +2,7 @@
 
 ## **Context**
 
-The below example will demonstrate MAT-DP Core's capabilities more extensively for optimally allocating resources in low-carbon systems.
+The below example will demonstrate Mat-dp core's capabilities more extensively for optimally allocating resources in low-carbon systems.
 
 There exists multiple available resources to be used in the construction of a hydroelectric dam.  
 Researchers have been tasked with decomposing total CO2 output of this project, and gathering insights about material use.
@@ -105,7 +105,7 @@ measure = Measure(r, p, constraints, objective)
 
 ## **Printing**
 
-Below is an example of how you may wish to print resulting data from MAT-DP Core:
+Below is an example of how you may wish to print resulting data from Mat-dp core:
 
 ```py
 # Printing
