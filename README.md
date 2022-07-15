@@ -5,23 +5,15 @@ Welcome to the Mat-dp core. This repo represents the core of the MAT-dp project,
 
 # Installation and launch
 
-Please install poetry - see [here](https://github.com/python-poetry/poetry)
+You can find [mat-dp-core in PyPi](https://pypi.org/project/mat-dp-core/). You can then install it using:
 
-You can find mat-dp-core in PyPi. You can use poetry to add it to your working environment, which will help install all other additional dependencies required.
+`pip install mat-dp-core`
 
-`poetry add mat-dp-core`
-
-To install all the project dependencies
-
-`poetry install`
-
-Then go the examples folder
+There is an examples folder you can access either navigating to it or using the following command:
 
 `cd examples`
 
-Then run the pizza box example
-
-`poetry run python3 test.py`
+You can then run examples, such as the pizza box example called test.py
 
 # Concepts
 
@@ -157,10 +149,32 @@ or run the documentation through mkdocs using the following command at the root 
 
 
 Contributions are welcome! 
+
 If you see something that needs to be improved, open an issue in the [respective section of the repository](https://github.com/Mat-dp/mat-dp-core/issues).
 If you have questions, need assistance or need better instructions for contributing, please 
 [get in touch via e-mail](mailto:refficiency-enquiries@eng.cam.ac.uk) mentioning "Mat-dp" in the subject.
 
+
+Developers of mat-dp-core need to make changes using poetry with the following instructions:
+
+
+Please install poetry- please see [here](https://github.com/python-poetry/poetry)
+
+Then, install mat-dp-core with:
+
+`poetry add mat-dp-core`
+
+To install all the project dependencies
+
+`poetry install`
+
+Then go the examples folder
+
+`cd examples`
+
+Then run the pizza box example to test everything works.
+
+`poetry run python3 test.py`
 
 For any questions on how to use the software, please refer to the [documentation](https://github.com/Mat-dp/mat-dp-core/tree/master/docs). 
 It contains useful definitions and examples of using the software. Please contact us by e-mail for any other support requried.
