@@ -1,5 +1,5 @@
 ---
-title: 'Mat-dp: An open-source Python model for analysing material demand projections and their environmental implications, 
+title: 'Mat-dp: An open-source python model for analysing material demand projections and their environmental implications, 
 which result from building low-carbon systems.'
 tags:
   - materials
