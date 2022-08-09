@@ -133,9 +133,18 @@ We must now measure the number of pizza boxes to burn.
 from mat_dp_core import Measure
 
 measurement = Measure(resources, processes, constraints, objective)
-print(measurement.resource(pizza_box))
-```
 
+print(measurement.resource(resource = pizza_box))
+
+```
+For a more stylised version of the print statement, the following may be used:
+
+```py
+
+for process in measurement.resource(resource=pizza_box):
+    print(str(process[0].name).ljust(50) + ":  " + str(round(process[1], 1)))
+
+```
 
 # Visualising the documentation
 
