@@ -1,5 +1,5 @@
 ---
-title: 'Mat-dp: An open-source python model for analysing material demand projections and their environmental implications, 
+title: 'Mat-dp: An open-source Python model for analysing material demand projections and their environmental implications, 
 which result from building low-carbon systems.'
 tags:
   - materials
@@ -27,17 +27,14 @@ bibliography: paper.bib
 
 # Summary
 
-MAT-dp is a python model which aims to calculate the amounts and types of materials needed for building any system
+MAT-dp is a Python model which aims to calculate the amounts and types of materials needed for building any system
 or resource transformation including those found along any supply chain- but is particularly applied to studying
 the materials needed for building low-carbon systems- and estimate the environmental implications associated to such materials.
 
 Mat-dp contains a linear programming library called mat-dp-core which includes 
 the core classes of each element and their mathematical operations for obtaining results. Mat-dp-core is tailored to the needs of 
 research around material demand for low-carbon systems, helping technically proficient users to explore scenarios and systems 
-relating to their research in python.
-Mat-dp-core has an easy-to-use structure and code base with the mathematical model to let users evaluate and optimise the environmental 
-effects of a given set of resources that are fed into one or more processes.
-
+relating to their research in Python. Mat-dp-core has an easy-to-use structure and code base with the mathematical model to let users evaluate and optimise the environmental effects of a given set of resources that are fed into one or more processes.
 
 In mat-dp-core, the system and its required materials are defined as a series of resources that are fed 
 into different processes, which in turn have a defined set of outputs. 
@@ -62,7 +59,7 @@ Thus, identifying and implementing options for reducing material emissions is re
 
 Mat-dp offers an easy-to-use structure to study material demands, where the types of processes and resources can
 be extended as much as the user needs. To the best of our knowledge, this is the first time that such an extensible
-open-source python model to study materials has been developed. Previous models in the literature and other open-source models have
+open-source Python model to study materials has been developed. Previous models in the literature and other open-source models have
 focused on either only a subset of systems (e.g., materials for buildings) or a comprehensive, yet prescribed, 
 set of systems which include some technologies and materials (e.g., ODYM-RECC model [@Pauliuk2020]). The reusable nature of 
 Mat-dp makes it ideal for allowing users to focus on the process(es) they want to investigate, rather than setting up code 
@@ -81,7 +78,7 @@ that are tailored for a specific case-study, which might benefit decision making
 
 Mat-dp is ideal for academics who work on understanding or reducing environmental effects of different processes,
 government officials who work on national material and emission strategies, or practitioners who work
-on estimating material demands for a given project. Proficiency in python is needed, so the users can
+on estimating material demands for a given project. Proficiency in Python is needed, so the users can
 adapt their requirements in the form needed for the model.
 
 The model facilitates the framing of resource flows and the optimisation of their flows 
@@ -103,7 +100,6 @@ in a system, (3) which process emissions must be minimised to achieve the highes
 We acknowledge the contribution from Maaike E Hakker in the inception of 
 this project, and the contribution from Edd Salkield, Mark Todd, and Elliott Hughes 
 who have helped refactor the model into its current extensible form.
-
 
 This material has been produced under the Climate Compatible Growth programme, which 
 is funded by UK aid from the UK government. However the views expressed herein do not 
