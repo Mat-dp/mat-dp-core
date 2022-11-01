@@ -7,7 +7,7 @@ authors = ["Edd Salkield <edd@salkield.uk>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.10"
+python = ">=3.9,<4.0"
 scipy = "^1.7.1"
 numpy = "^1.23.0"
 
